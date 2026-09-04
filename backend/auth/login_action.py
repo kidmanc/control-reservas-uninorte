@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from usuarios.usuarios_model import Usuario
 from config import settings
 
-SECRET_KEY = "cambiar-en-produccion-una-clave-segura"
+SECRET_KEY = settings.SECRET_KEY
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24  # 24 horas
 

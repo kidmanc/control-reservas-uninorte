@@ -9,6 +9,9 @@ class Settings(BaseSettings):
     # SQLite (desarrollo)
     DB_PATH: str = os.path.join(os.path.dirname(__file__), "casos_especiales.db")
 
+    # JWT — usar variable de entorno SECRET_KEY en producción
+    SECRET_KEY: str = "dev-solo-no-usar-en-produccion-cambiar"
+
     @property
     def DATABASE_URL(self) -> str:
         return f"sqlite+aiosqlite:///{self.DB_PATH}"

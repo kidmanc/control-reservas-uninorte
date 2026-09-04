@@ -40,6 +40,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+# TODO(prod): restringir allow_origins a dominios reales (ej. https://app.uninorte.edu.co)
+# y quitar allow_credentials=True con origen "*". Esto es solo para desarrollo.
 
 # --- Routes ---
 
