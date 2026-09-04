@@ -1,8 +1,10 @@
 /**
  * CAPA DE DATOS — fetch al backend FastAPI.
  *
- * Cada función corresponde a un endpoint del backend.
- * Los componentes no cambian, solo se reemplazó el mock por fetch.
+ * El identificador público/visible de un caso es `numero_caso` (ej. "RM-2026-0042"),
+ * que es lo que viaja en las URLs de navegación. Internamente el backend usa un
+ * `id` entero (campo `db_id`) para las operaciones de escritura. Aquí resolvemos
+ * ese id numérico y las llamadas a la API usan siempre el correcto.
  */
 
 const API = '/api';
@@ -27,7 +29,10 @@ function normalizarCaso(caso) {
   if (!caso) return null;
   return {
     ...caso,
+    // id visible = número de caso (para navegación y mostrado)
     id: caso.numero_caso,
+    // id interno = entero (para APIs de escritura)
+    db_id: caso.id,
     tercero: caso.tercero_nombre
       ? {
           nombre_completo: caso.tercero_nombre,
@@ -45,6 +50,7 @@ export async function listCasos() {
   return casos.map(normalizarCaso);
 }
 
+// getCaso recibe el numero_caso (identificador visible de la URL)
 export async function getCaso(numeroCaso) {
   const caso = await request(`/casos/numero/${numeroCaso}`);
   return normalizarCaso(caso);
@@ -66,32 +72,34 @@ export async function crearCaso(payload) {
   return normalizarCaso(caso);
 }
 
-export async function cambiarEstado(id, nuevoEstado) {
-  const caso = await request(`/casos/${id}/estado`, {
+// Las funciones de escritura reciben el numero_caso (de la URL) y resuelven el id interno
+export async function cambiarEstado(numeroCaso, nuevoEstado) {
+  const { db_id } = await getCaso(numeroCaso);
+  const caso = await request(`/casos/${db_id}/estado`, {
     method: 'PATCH',
     body: JSON.stringify({ nuevo_estado: nuevoEstado }),
   });
   return normalizarCaso(caso);
 }
 
-export async function agregarComentario(id, { texto, visible_para_estudiante, autor }) {
-  await request(`/casos/${id}/comentarios/`, {
+export async function agregarComentario(numeroCaso, { texto, visible_para_estudiante, autor }) {
+  const { db_id } = await getCaso(numeroCaso);
+  await request(`/casos/${db_id}/comentarios/`, {
     method: 'POST',
     body: JSON.stringify({ texto, visible_para_estudiante, autor }),
   });
-  // Recargar el caso completo con los nuevos comentarios
-  return getCaso(id);
+  return getCaso(numeroCaso);
 }
 
-export async function subirArchivoEstudiante(id, archivo) {
+export async function subirArchivoEstudiante(numeroCaso, archivo) {
+  const { db_id } = await getCaso(numeroCaso);
   const formData = new FormData();
   formData.append('archivo', archivo);
   formData.append('subido_por', 'estudiante');
 
-  await request(`/casos/${id}/archivos/`, {
+  await request(`/casos/${db_id}/archivos/`, {
     method: 'POST',
     body: formData,
   });
-  // Recargar el caso completo con los nuevos archivos
-  return getCaso(id);
+  return getCaso(numeroCaso);
 }

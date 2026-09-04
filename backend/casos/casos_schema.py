@@ -1,6 +1,10 @@
 from pydantic import BaseModel
 from datetime import datetime
 
+from comentarios.comentarios_schema import ComentarioResponse
+from archivos.archivos_schema import ArchivoResponse
+from historial.historial_schema import HistorialResponse
+
 
 class CasoBase(BaseModel):
     nombre_completo: str
@@ -36,9 +40,9 @@ class CasoResponse(CasoBase):
 
 
 class CasoDetalle(CasoResponse):
-    comentarios: list = []
-    archivos: list = []
-    historial_estados: list = []
+    comentarios: list[ComentarioResponse] = []
+    archivos: list[ArchivoResponse] = []
+    historial_estados: list[HistorialResponse] = []
 
 
 class CambiarEstadoRequest(BaseModel):
