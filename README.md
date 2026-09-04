@@ -17,6 +17,7 @@ control-reservas-uninorte/
 ```bash
 cd backend
 pip install -r requirements.txt
+cp .env.example .env  # opcional: sobrescribir SECRET_KEY
 uvicorn main:app --reload --port 8000
 ```
 
@@ -26,6 +27,8 @@ O con Docker:
 cd backend
 docker-compose up -d
 ```
+
+> Nota: en desarrollo la base es **SQLite** (`backend/casos_especiales.db`), se crea al iniciar y **no se sube al repo** (está en `.gitignore`). Para producción se migra a PostgreSQL (ver Docker).
 
 La API estará en `http://localhost:8000/docs` (Swagger UI).
 
