@@ -1,0 +1,35 @@
+/*
+  Design tokens — Tesorería · Casos especiales (Uninorte)
+  Extraídos 1:1 del mockup aprobado (mockup_casos_especiales.html).
+  No inventar valores nuevos aquí: si falta un token, revisar el mockup primero.
+*/
+:root {
+  /* Marca */
+  --negro: #1b1b1a;
+  --rojo: #d20a11;
+  --rojo-hover: #b40810;
+  --amarillo: #fecb00;
+
+  /* Estados de caso */
+  --verde: #1f7a4d;
+  --verde-bg: #eaf6ef;
+  --rechazado: #b3413a;
+  --rechazado-bg: #fbebe9;
+  --recibido: #5b6b7a;
+  --recibido-bg: #eef1f4;
+  --revision: #b8720b;
+  --revision-bg: #fdf1de;
+  --falta-bg: #fef6d9;
+  --azul: #2b5c8a;
+  --azul-bg: #eaf1f8;
+
+  /* Superficie */
+  --bg: #faf8f5;
+  --card: #ffffff;
+  --border: #e8e4dd;
+  --text-secondary: #5f5c56;
+
+  /* Tipografía */
+  --font-display: 'Montserrat', sans-serif;
+  --font-body: 'Inter', sans-serif;
+}

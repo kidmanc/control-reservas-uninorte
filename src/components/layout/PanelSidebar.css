@@ -1,0 +1,27 @@
+.panel-layout { display: flex; min-height: 100vh; }
+
+.sidebar {
+  width: 250px; background: var(--negro); color: white; flex-shrink: 0;
+  display: flex; flex-direction: column; padding: 24px 0;
+}
+.sidebar-brand { display: flex; align-items: center; gap: 12px; padding: 0 24px 28px; border-bottom: 1px solid #33322c; margin-bottom: 20px; }
+.sidebar-brand .logo-mark { width: 34px; height: 34px; font-size: 13px; }
+.sidebar-brand .brand-text { font-size: 13.5px; font-weight: 700; line-height: 1.3; }
+.sidebar-brand .brand-sub { font-size: 11px; color: #a3a39f; font-weight: 500; }
+
+.nav-item {
+  display: flex; align-items: center; gap: 12px; padding: 11px 24px; margin: 2px 12px;
+  border-radius: 10px; color: #c9c7c1; font-size: 13.5px; font-weight: 600;
+  font-family: var(--font-display); cursor: pointer; transition: all .15s ease;
+  text-decoration: none;
+}
+.nav-item:hover { background: #2a2a26; color: white; }
+.nav-item.active { background: var(--rojo); color: white; }
+.nav-item .dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; opacity: .5; }
+
+.sidebar-footer { margin-top: auto; padding: 16px 24px; border-top: 1px solid #33322c; display: flex; align-items: center; gap: 10px; }
+.avatar { width: 32px; height: 32px; border-radius: 50%; background: #3a392f; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; font-family: var(--font-display); color: var(--amarillo); }
+.user-name { font-size: 12.5px; font-weight: 600; color: white; }
+.user-role { font-size: 11px; color: #a3a39f; }
+
+.main-panel { flex: 1; padding: 32px 40px; max-width: 100%; overflow-x: hidden; }

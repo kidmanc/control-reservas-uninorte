@@ -1,0 +1,57 @@
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700;800&family=Inter:wght@400;500;600&display=swap');
+@import './tokens.css';
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body, #root { height: 100%; }
+
+body {
+  font-family: var(--font-body);
+  background: var(--bg);
+  color: var(--negro);
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3, .font-brand { font-family: var(--font-display); }
+
+button {
+  font: inherit;
+  cursor: pointer;
+}
+
+a { color: inherit; }
+
+.logo-mark {
+  width: 40px; height: 40px; border-radius: 10px; background: var(--rojo);
+  display: flex; align-items: center; justify-content: center;
+  color: white; font-family: var(--font-display); font-weight: 800; font-size: 15px;
+  flex-shrink: 0;
+}
+
+.badge {
+  display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700;
+  padding: 5px 11px; border-radius: 100px; font-family: var(--font-display); width: fit-content;
+}
+.badge .dot { width: 6px; height: 6px; border-radius: 50%; }
+.badge-recibido { background: var(--recibido-bg); color: var(--recibido); }
+.badge-revision { background: var(--revision-bg); color: var(--revision); }
+.badge-falta { background: var(--falta-bg); color: #8a6d00; }
+.badge-aprobado { background: var(--verde-bg); color: var(--verde); }
+.badge-rechazado { background: var(--rechazado-bg); color: var(--rechazado); }
+
+.type-tag {
+  display: inline-flex; align-items: center; gap: 6px; font-size: 11.5px; font-weight: 700;
+  padding: 4px 10px; border-radius: 100px; font-family: var(--font-display); width: fit-content;
+}
+.type-tag.reserva { background: var(--azul-bg); color: var(--azul); }
+.type-tag.devolucion { background: #f3ecf9; color: #6b3fa0; }
+
+.btn-primary {
+  font-family: var(--font-display); font-weight: 700; font-size: 14px;
+  background: var(--negro); color: white; border: none; border-radius: 10px;
+  padding: 14px 28px; display: inline-flex; align-items: center; gap: 8px;
+  transition: transform .15s ease, background .15s ease;
+}
+.btn-primary:hover { background: #000; transform: translateY(-1px); }
+.btn-primary:active { transform: scale(0.98); }
+.btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
