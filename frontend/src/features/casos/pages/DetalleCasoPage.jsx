@@ -5,7 +5,7 @@ import EstadoBadge from '../../../components/ui/EstadoBadge';
 import TipoTag from '../../../components/ui/TipoTag';
 import { IconBack, IconUsers } from '../../../components/ui/icons';
 import { useAuth } from '../../auth/AuthContext';
-import { getCaso, cambiarEstado, agregarComentario } from '../api/casosApi';
+import { getCaso, cambiarEstado, agregarComentario, obtenerArchivo } from '../api/casosApi';
 import StatusChanger from '../components/StatusChanger';
 import FilesSidebar from '../components/FilesSidebar';
 import CommentComposer from '../components/CommentComposer';
@@ -25,6 +25,7 @@ export default function DetalleCasoPage() {
   const [errorCarga, setErrorCarga] = useState(null);
   const [cambiandoEstado, setCambiandoEstado] = useState(false);
   const [enviandoComentario, setEnviandoComentario] = useState(false);
+  const [archivoAbriendoId, setArchivoAbriendoId] = useState(null);
   const [errorAccion, setErrorAccion] = useState(null);
 
   const cargar = useCallback(async () => {
@@ -71,6 +72,30 @@ export default function DetalleCasoPage() {
       setErrorAccion(err.message || 'No se pudo guardar el comentario.');
     } finally {
       setEnviandoComentario(false);
+    }
+  }
+
+  async function onVerArchivo(archivo) {
+    const ventana = window.open('', '_blank');
+    setArchivoAbriendoId(archivo.id);
+    setErrorAccion(null);
+    try {
+      const blob = await obtenerArchivo(caso.db_id, archivo.id);
+      const url = URL.createObjectURL(blob);
+      if (ventana) {
+        ventana.location.href = url;
+      } else {
+        const enlace = document.createElement('a');
+        enlace.href = url;
+        enlace.download = archivo.nombre_archivo;
+        enlace.click();
+      }
+      window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    } catch (err) {
+      ventana?.close();
+      setErrorAccion(err.message || 'No se pudo obtener el archivo.');
+    } finally {
+      setArchivoAbriendoId(null);
     }
   }
 
@@ -194,7 +219,11 @@ export default function DetalleCasoPage() {
           <div>
             {errorAccion && <div className="form-error" style={{ marginBottom: 16 }}>{errorAccion}</div>}
             <StatusChanger estadoActual={caso.estado} onCambiar={onCambiarEstado} cambiando={cambiandoEstado} />
-            <FilesSidebar archivos={caso.archivos} />
+            <FilesSidebar
+              archivos={caso.archivos}
+              onVerArchivo={onVerArchivo}
+              archivoAbriendoId={archivoAbriendoId}
+            />
             <CommentComposer comentarios={caso.comentarios} onAgregar={onAgregarComentario} enviando={enviandoComentario} />
           </div>
         </div>

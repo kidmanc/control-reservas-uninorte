@@ -41,3 +41,10 @@ async def listar_archivos_action(db: AsyncSession, caso_id: int) -> list[Archivo
         select(Archivo).where(Archivo.caso_id == caso_id).order_by(Archivo.fecha)
     )
     return list(result.scalars().all())
+
+
+async def obtener_archivo_action(db: AsyncSession, caso_id: int, archivo_id: int) -> Archivo | None:
+    result = await db.execute(
+        select(Archivo).where(Archivo.caso_id == caso_id, Archivo.id == archivo_id)
+    )
+    return result.scalar_one_or_none()

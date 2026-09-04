@@ -1,6 +1,6 @@
 import { IconFile, IconCheckCircle } from '../../../components/ui/icons';
 
-export default function FilesSidebar({ archivos }) {
+export default function FilesSidebar({ archivos, onVerArchivo, archivoAbriendoId }) {
   return (
     <div className="sidebar-card">
       <h3>
@@ -29,6 +29,15 @@ export default function FilesSidebar({ archivos }) {
                 Subido por {archivo.subido_por === 'tercero' ? 'el tercero' : 'el estudiante'}
               </div>
             </div>
+            <button
+              type="button"
+              className="btn-secondary"
+              style={{ padding: '7px 10px', fontSize: 12 }}
+              onClick={() => onVerArchivo(archivo)}
+              disabled={archivoAbriendoId === archivo.id}
+            >
+              {archivoAbriendoId === archivo.id ? 'Abriendo…' : 'Ver / descargar'}
+            </button>
           </div>
         );
       })}

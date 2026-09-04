@@ -88,11 +88,27 @@ export async function crearCaso(payload) {
 // Las funciones de escritura reciben el numero_caso (de la URL) y resuelven el id interno
 export async function cambiarEstado(numeroCaso, nuevoEstado) {
   const { db_id } = await getCaso(numeroCaso);
-  const caso = await request(`/casos/${db_id}/estado`, {
+  await request(`/casos/${db_id}/estado`, {
     method: 'PATCH',
     body: JSON.stringify({ nuevo_estado: nuevoEstado }),
   });
-  return normalizarCaso(caso);
+  return getCaso(numeroCaso);
+}
+
+export async function obtenerArchivo(casoId, archivoId) {
+  const token = localStorage.getItem('token');
+  const headers = token ? { Authorization: `Bearer ${token}` } : {};
+  let res;
+  try {
+    res = await fetch(`${API}/casos/${casoId}/archivos/${archivoId}/descargar`, { headers });
+  } catch {
+    throw new Error('No se pudo conectar con el servidor.');
+  }
+  if (!res.ok) {
+    const error = await res.json().catch(() => ({ detail: 'No se pudo obtener el archivo' }));
+    throw new Error(error.detail || 'No se pudo obtener el archivo');
+  }
+  return res.blob();
 }
 
 export async function agregarComentario(numeroCaso, { texto, visible_para_estudiante, autor }) {
