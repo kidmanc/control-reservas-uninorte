@@ -1,4 +1,5 @@
-from fastapi import APIRouter, Depends, HTTPException, Header
+from fastapi import APIRouter, Depends, HTTPException
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from main import get_db
@@ -8,12 +9,18 @@ from auth.login_action import verificar_token
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
+# HTTPBearer expone el botón "Authorize" en Swagger y envía el header automáticamente.
+security = HTTPBearer(auto_error=False)
 
-async def get_current_user(authorization: str = Header(None), db: AsyncSession = Depends(get_db)) -> dict:
-    if not authorization or not authorization.startswith("Bearer "):
+
+async def get_current_user(
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    if not credentials:
         raise HTTPException(status_code=401, detail="No autenticado")
 
-    token = authorization.split(" ")[1]
+    token = credentials.credentials
     payload = verificar_token(token)
 
     if not payload:
