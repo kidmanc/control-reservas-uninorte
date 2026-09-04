@@ -1,0 +1,111 @@
+.login-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--negro);
+  padding: 24px;
+}
+
+.login-card {
+  width: 100%;
+  max-width: 420px;
+  background: var(--card);
+  border-radius: 16px;
+  padding: 40px 36px 32px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
+}
+
+.login-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 32px;
+}
+
+.login-brand .brand-title {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 16px;
+  color: var(--negro);
+}
+
+.login-brand .brand-sub {
+  font-size: 12.5px;
+  color: var(--text-secondary);
+}
+
+.login-card h1 {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 22px;
+  margin-bottom: 6px;
+}
+
+.login-subtitle {
+  font-size: 13.5px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  margin-bottom: 28px;
+}
+
+.login-field {
+  margin-bottom: 18px;
+}
+
+.login-field label {
+  display: block;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 13px;
+  margin-bottom: 6px;
+  color: var(--negro);
+}
+
+.login-field input {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1.5px solid var(--border);
+  border-radius: 10px;
+  font-family: var(--font-body);
+  font-size: 14px;
+  color: var(--negro);
+  background: var(--bg);
+  transition: border-color 0.15s ease;
+}
+
+.login-field input:focus {
+  outline: none;
+  border-color: var(--negro);
+}
+
+.login-field input::placeholder {
+  color: #b3ada2;
+}
+
+.login-error {
+  background: var(--rechazado-bg);
+  color: var(--rechazado);
+  font-size: 13px;
+  font-weight: 500;
+  padding: 10px 14px;
+  border-radius: 8px;
+  margin-bottom: 18px;
+}
+
+.login-btn {
+  width: 100%;
+  justify-content: center;
+  padding: 14px;
+  font-size: 15px;
+}
+
+.login-footer {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 28px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+  font-size: 11px;
+  color: #b3ada2;
+}

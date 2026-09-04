@@ -1,28 +1,43 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { AuthProvider } from './features/auth/AuthContext';
+import ProtectedRoute from './features/auth/ProtectedRoute';
 import FormularioCasoPage from './features/casos/pages/FormularioCasoPage';
 import ListaCasosPage from './features/casos/pages/ListaCasosPage';
 import DetalleCasoPage from './features/casos/pages/DetalleCasoPage';
 import SeguimientoCasoPage from './features/casos/pages/SeguimientoCasoPage';
-import DevNav from './components/layout/DevNav';
+import LoginPage from './features/auth/pages/LoginPage';
 
 export default function App() {
   return (
     <BrowserRouter>
-      {/* Quitar DevNav cuando el flujo real de navegación esté definido — ver components/layout/DevNav.jsx */}
-      <DevNav />
-      <Routes>
-        {/* Vista pública: formulario de estudiante/tercero */}
-        <Route path="/" element={<FormularioCasoPage />} />
+      <AuthProvider>
+        <Routes>
+          {/* Vistas públicas */}
+          <Route path="/" element={<FormularioCasoPage />} />
+          <Route path="/seguimiento/:id" element={<SeguimientoCasoPage />} />
+          <Route path="/login" element={<LoginPage />} />
 
-        {/* Vista pública: seguimiento del caso (enlace enviado por correo, sin login) */}
-        <Route path="/seguimiento/:id" element={<SeguimientoCasoPage />} />
+          {/* Panel interno de Tesorería — requiere autenticación */}
+          <Route
+            path="/panel"
+            element={
+              <ProtectedRoute>
+                <ListaCasosPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/panel/casos/:id"
+            element={
+              <ProtectedRoute>
+                <DetalleCasoPage />
+              </ProtectedRoute>
+            }
+          />
 
-        {/* Panel interno de Tesorería */}
-        <Route path="/panel" element={<ListaCasosPage />} />
-        <Route path="/panel/casos/:id" element={<DetalleCasoPage />} />
-
-        {/* TODO: rutas de "Tipos de solicitud", "Reportes" y "Configuración" (ver PanelSidebar) */}
-      </Routes>
+          {/* TODO: rutas de "Tipos de solicitud", "Reportes" y "Configuración" */}
+        </Routes>
+      </AuthProvider>
     </BrowserRouter>
   );
 }

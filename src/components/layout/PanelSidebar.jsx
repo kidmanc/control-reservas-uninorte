@@ -1,8 +1,6 @@
-import { NavLink } from 'react-router-dom';
+import { NavLink, useNavigate } from 'react-router-dom';
+import { useAuth } from '../../features/auth/AuthContext';
 import './PanelSidebar.css';
-
-// TODO(auth): reemplazar por el usuario autenticado real cuando exista login institucional.
-const USUARIO_ACTUAL = { nombre: 'Carolina Mejía', rol: 'Asistente Tesorería', iniciales: 'CM' };
 
 const NAV_ITEMS = [
   { to: '/panel', label: 'Casos', end: true },
@@ -12,6 +10,14 @@ const NAV_ITEMS = [
 ];
 
 export default function PanelSidebar() {
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
+
+  function onLogout() {
+    logout();
+    navigate('/login', { replace: true });
+  }
+
   return (
     <aside className="sidebar">
       <div className="sidebar-brand">
@@ -34,11 +40,28 @@ export default function PanelSidebar() {
       ))}
 
       <div className="sidebar-footer">
-        <div className="avatar">{USUARIO_ACTUAL.iniciales}</div>
-        <div>
-          <div className="user-name">{USUARIO_ACTUAL.nombre}</div>
-          <div className="user-role">{USUARIO_ACTUAL.rol}</div>
+        <div className="avatar">{user?.iniciales || '??'}</div>
+        <div style={{ flex: 1 }}>
+          <div className="user-name">{user?.nombre || 'Sin sesión'}</div>
+          <div className="user-role">{user?.rol || ''}</div>
         </div>
+        <button
+          onClick={onLogout}
+          title="Cerrar sesión"
+          style={{
+            background: 'none',
+            border: '1px solid var(--border)',
+            borderRadius: 8,
+            padding: '6px 10px',
+            fontSize: 11,
+            color: 'var(--text-secondary)',
+            fontFamily: 'var(--font-display)',
+            fontWeight: 600,
+            cursor: 'pointer',
+          }}
+        >
+          Salir
+        </button>
       </div>
     </aside>
   );
