@@ -34,6 +34,14 @@ export default function App() {
               </ProtectedRoute>
             }
           />
+          <Route
+            path="/panel/casos/nueva"
+            element={
+              <ProtectedRoute>
+                <FormularioCasoPage />
+              </ProtectedRoute>
+            }
+          />
 
           {/* TODO: rutas de "Tipos de solicitud", "Reportes" y "Configuración" */}
         </Routes>

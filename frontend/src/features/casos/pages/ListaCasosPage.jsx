@@ -72,8 +72,7 @@ export default function ListaCasosPage() {
             <h1>Casos especiales</h1>
             <div className="sub">Reservas de matrícula por causa especial y devoluciones — gestión y trazabilidad</div>
           </div>
-          {/* TODO: habilitar creación manual de caso por la asistente cuando exista ese flujo en el backend */}
-          <button className="btn-primary" style={{ background: 'var(--negro)' }}>
+          <button className="btn-primary" style={{ background: 'var(--negro)' }} onClick={() => navigate('/panel/casos/nueva')}>
             <IconPlus />
             Nuevo caso manual
           </button>

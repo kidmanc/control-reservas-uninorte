@@ -1,5 +1,7 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
+import PanelSidebar from '../../../components/layout/PanelSidebar';
+import { IconBack } from '../../../components/ui/icons';
 import { crearCaso } from '../api/casosApi';
 import { TIPOS_SOLICITUD, TIPO_SOLICITUD_LABEL, PARENTESCOS } from '../constants';
 import { IconClock, IconInfo, IconUsers, IconUpload, IconCheckCircle, IconFile, IconArrowRight } from '../../../components/ui/icons';
@@ -25,6 +27,8 @@ const ESTADO_INICIAL = {
 };
 
 export default function FormularioCasoPage() {
+  const location = useLocation();
+  const esPanel = location.pathname.startsWith('/panel');
   const [form, setForm] = useState(ESTADO_INICIAL);
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState(null);
@@ -56,6 +60,10 @@ export default function FormularioCasoPage() {
       setError('Completa los campos obligatorios antes de enviar la solicitud.');
       return;
     }
+    if (form.archivos.length === 0) {
+      setError('Adjunta al menos un documento de soporte: es obligatorio para completar la solicitud.');
+      return;
+    }
     if (form.esTercero && !form.archivo_representacion) {
       setError('Adjunta el soporte de representación: es obligatorio cuando un tercero diligencia la solicitud.');
       return;
@@ -84,6 +92,28 @@ export default function FormularioCasoPage() {
   }
 
   if (casoCreado) {
+    if (esPanel) {
+      return (
+        <div className="panel-layout">
+          <PanelSidebar />
+          <main className="main-panel">
+            <div className="success-screen">
+              <div className="icon-wrap">
+                <IconCheckCircle stroke="var(--verde)" />
+              </div>
+              <h1>Caso creado</h1>
+              <p>
+                Registraste el caso con el número <span className="caso-id">{casoCreado.id}</span>.
+              </p>
+              <Link className="btn-primary" to={`/panel/casos/${casoCreado.id}`}>
+                Ver el caso en el panel
+              </Link>
+            </div>
+          </main>
+        </div>
+      );
+    }
+
     return (
       <div className="student-page">
         <StudentHeader />
@@ -109,10 +139,30 @@ export default function FormularioCasoPage() {
     );
   }
 
+  if (esPanel) {
+    return (
+      <div className="panel-layout">
+        <PanelSidebar />
+        <main className="main-panel">
+          <button type="button" className="back-link" onClick={() => window.history.back()}>
+            <IconBack />
+            Volver a todos los casos
+          </button>
+          {renderForm()}
+        </main>
+      </div>
+    );
+  }
+
   return (
     <div className="student-page">
       <StudentHeader />
+      {renderForm()}
+    </div>
+  );
 
+  function renderForm() {
+    return (
       <form className="student-container" onSubmit={onSubmit}>
         <div className="intro-block">
           <span className="eyebrow-pill">
@@ -328,6 +378,7 @@ export default function FormularioCasoPage() {
           <div className="section-heading">
             <div className="section-number">4</div>
             <h2>Documentos de soporte</h2>
+            <span className="required-tag">Obligatorio</span>
           </div>
           <div className="field">
             <label>Descripción breve de lo que adjuntas</label>
@@ -408,8 +459,8 @@ export default function FormularioCasoPage() {
           </button>
         </div>
       </form>
-    </div>
-  );
+    );
+  }
 }
 
 function StudentHeader() {

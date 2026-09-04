@@ -4,6 +4,7 @@ import PanelSidebar from '../../../components/layout/PanelSidebar';
 import EstadoBadge from '../../../components/ui/EstadoBadge';
 import TipoTag from '../../../components/ui/TipoTag';
 import { IconBack, IconUsers } from '../../../components/ui/icons';
+import { useAuth } from '../../auth/AuthContext';
 import { getCaso, cambiarEstado, agregarComentario } from '../api/casosApi';
 import StatusChanger from '../components/StatusChanger';
 import FilesSidebar from '../components/FilesSidebar';
@@ -18,6 +19,7 @@ function formatFecha(iso) {
 export default function DetalleCasoPage() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [caso, setCaso] = useState(null);
   const [cargando, setCargando] = useState(true);
   const [cambiandoEstado, setCambiandoEstado] = useState(false);
@@ -47,7 +49,10 @@ export default function DetalleCasoPage() {
   async function onAgregarComentario(comentario) {
     setEnviandoComentario(true);
     try {
-      const actualizado = await agregarComentario(id, comentario);
+      const actualizado = await agregarComentario(id, {
+        ...comentario,
+        autor: user?.nombre || 'Asistente de Tesorería',
+      });
       setCaso(actualizado);
     } finally {
       setEnviandoComentario(false);

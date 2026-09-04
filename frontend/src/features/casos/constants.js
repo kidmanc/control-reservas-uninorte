@@ -44,7 +44,7 @@ export const TIPOS_SOLICITUD = {
 };
 
 export const TIPO_SOLICITUD_LABEL = {
-  [TIPOS_SOLICITUD.RESERVA_MATRICULA]: 'Reserva de matrícula (caso especial)',
+  [TIPOS_SOLICITUD.RESERVA_MATRICULA]: 'Reserva de matrícula',
   [TIPOS_SOLICITUD.DEVOLUCION]: 'Devolución',
 };
 
