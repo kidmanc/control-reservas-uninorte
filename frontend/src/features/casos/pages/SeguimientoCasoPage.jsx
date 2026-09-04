@@ -34,14 +34,23 @@ export default function SeguimientoCasoPage() {
   const { id } = useParams();
   const [caso, setCaso] = useState(null);
   const [cargando, setCargando] = useState(true);
+  const [errorCarga, setErrorCarga] = useState(null);
+  const [errorAccion, setErrorAccion] = useState(null);
   const [respuesta, setRespuesta] = useState('');
   const [enviandoRespuesta, setEnviandoRespuesta] = useState(false);
   const [subiendoArchivo, setSubiendoArchivo] = useState(false);
 
   const cargar = useCallback(async () => {
-    const data = await getCaso(id);
-    setCaso(data);
-    setCargando(false);
+    setCargando(true);
+    try {
+      const data = await getCaso(id);
+      setCaso(data);
+      setErrorCarga(null);
+    } catch (err) {
+      setErrorCarga(err.message || 'No se pudo cargar el caso.');
+    } finally {
+      setCargando(false);
+    }
   }, [id]);
 
   useEffect(() => {
@@ -52,6 +61,7 @@ export default function SeguimientoCasoPage() {
   async function onEnviarRespuesta() {
     if (!respuesta.trim()) return;
     setEnviandoRespuesta(true);
+    setErrorAccion(null);
     try {
       // Todo lo que escribe el estudiante/tercero queda visible para Tesorería por definición.
       const actualizado = await agregarComentario(id, {
@@ -61,6 +71,8 @@ export default function SeguimientoCasoPage() {
       });
       setCaso(actualizado);
       setRespuesta('');
+    } catch (err) {
+      setErrorAccion(err.message || 'No se pudo enviar la respuesta.');
     } finally {
       setEnviandoRespuesta(false);
     }
@@ -71,9 +83,12 @@ export default function SeguimientoCasoPage() {
     e.target.value = '';
     if (!archivo) return;
     setSubiendoArchivo(true);
+    setErrorAccion(null);
     try {
       const actualizado = await subirArchivoEstudiante(id, archivo);
       setCaso(actualizado);
+    } catch (err) {
+      setErrorAccion(err.message || 'No se pudo subir el archivo.');
     } finally {
       setSubiendoArchivo(false);
     }
@@ -84,6 +99,17 @@ export default function SeguimientoCasoPage() {
       <div className="student-page">
         <StudentHeader />
         <p className="loading-state">Cargando tu solicitud…</p>
+      </div>
+    );
+  }
+
+  if (errorCarga) {
+    return (
+      <div className="student-page">
+        <StudentHeader />
+        <div className="seguimiento-container">
+          <p className="not-found-state" style={{ color: 'var(--rechazado)' }}>{errorCarga}</p>
+        </div>
       </div>
     );
   }
@@ -196,6 +222,9 @@ export default function SeguimientoCasoPage() {
                   {enviandoRespuesta ? 'Enviando...' : 'Enviar respuesta'}
                 </button>
               </div>
+              {errorAccion && (
+                <div className="form-error" style={{ marginTop: 12 }}>{errorAccion}</div>
+              )}
             </div>
           )}
         </div>

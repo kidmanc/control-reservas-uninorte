@@ -9,6 +9,9 @@ class Settings(BaseSettings):
     # SQLite (desarrollo)
     DB_PATH: str = os.path.join(os.path.dirname(__file__), "casos_especiales.db")
 
+    # Directorio de archivos subidos
+    UPLOAD_DIR: str = os.path.join(os.path.dirname(__file__), "uploads")
+
     # JWT — usar variable de entorno SECRET_KEY en producción
     SECRET_KEY: str = "dev-solo-no-usar-en-produccion-cambiar"
 

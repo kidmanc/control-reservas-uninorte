@@ -86,6 +86,8 @@ export default function FormularioCasoPage() {
       };
       const creado = await crearCaso(payload);
       setCasoCreado(creado);
+    } catch (err) {
+      setError(err.message || 'No se pudo enviar la solicitud. Intenta de nuevo.');
     } finally {
       setEnviando(false);
     }

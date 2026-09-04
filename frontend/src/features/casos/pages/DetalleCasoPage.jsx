@@ -22,13 +22,22 @@ export default function DetalleCasoPage() {
   const { user } = useAuth();
   const [caso, setCaso] = useState(null);
   const [cargando, setCargando] = useState(true);
+  const [errorCarga, setErrorCarga] = useState(null);
   const [cambiandoEstado, setCambiandoEstado] = useState(false);
   const [enviandoComentario, setEnviandoComentario] = useState(false);
+  const [errorAccion, setErrorAccion] = useState(null);
 
   const cargar = useCallback(async () => {
-    const data = await getCaso(id);
-    setCaso(data);
-    setCargando(false);
+    setCargando(true);
+    try {
+      const data = await getCaso(id);
+      setCaso(data);
+      setErrorCarga(null);
+    } catch (err) {
+      setErrorCarga(err.message || 'No se pudo cargar el caso.');
+    } finally {
+      setCargando(false);
+    }
   }, [id]);
 
   useEffect(() => {
@@ -38,9 +47,12 @@ export default function DetalleCasoPage() {
 
   async function onCambiarEstado(nuevoEstado) {
     setCambiandoEstado(true);
+    setErrorAccion(null);
     try {
       const actualizado = await cambiarEstado(id, nuevoEstado);
       setCaso(actualizado);
+    } catch (err) {
+      setErrorAccion(err.message || 'No se pudo cambiar el estado.');
     } finally {
       setCambiandoEstado(false);
     }
@@ -48,12 +60,15 @@ export default function DetalleCasoPage() {
 
   async function onAgregarComentario(comentario) {
     setEnviandoComentario(true);
+    setErrorAccion(null);
     try {
       const actualizado = await agregarComentario(id, {
         ...comentario,
         autor: user?.nombre || 'Asistente de Tesorería',
       });
       setCaso(actualizado);
+    } catch (err) {
+      setErrorAccion(err.message || 'No se pudo guardar el comentario.');
     } finally {
       setEnviandoComentario(false);
     }
@@ -65,6 +80,17 @@ export default function DetalleCasoPage() {
         <PanelSidebar />
         <main className="main-panel">
           <p className="loading-state">Cargando caso…</p>
+        </main>
+      </div>
+    );
+  }
+
+  if (errorCarga) {
+    return (
+      <div className="panel-layout">
+        <PanelSidebar />
+        <main className="main-panel">
+          <p className="not-found-state" style={{ color: 'var(--rechazado)' }}>{errorCarga}</p>
         </main>
       </div>
     );
@@ -166,6 +192,7 @@ export default function DetalleCasoPage() {
 
           {/* Columna derecha */}
           <div>
+            {errorAccion && <div className="form-error" style={{ marginBottom: 16 }}>{errorAccion}</div>}
             <StatusChanger estadoActual={caso.estado} onCambiar={onCambiarEstado} cambiando={cambiandoEstado} />
             <FilesSidebar archivos={caso.archivos} />
             <CommentComposer comentarios={caso.comentarios} onAgregar={onAgregarComentario} enviando={enviandoComentario} />

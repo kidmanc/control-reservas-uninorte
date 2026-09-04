@@ -1,8 +1,9 @@
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
+from fastapi import HTTPException
 
 from casos.casos_model import Caso, EstadoCaso
-from historial.create_historial_action import registrar_cambio_estado_action
+from historial.historial_model import HistorialEstado
 
 
 async def crear_caso_action(db: AsyncSession, data: dict, tercero: dict | None = None) -> Caso:
@@ -57,18 +58,25 @@ async def cambiar_estado_action(db: AsyncSession, caso_id: int, nuevo_estado: st
     if not caso:
         return None
 
-    estado_anterior = caso.estado
-    caso.estado = nuevo_estado
-    await db.commit()
+    # Validar que el estado exista antes de persistir
+    try:
+        estado_valido = EstadoCaso(nuevo_estado)
+    except ValueError:
+        raise HTTPException(status_code=400, detail=f"Estado inválido: {nuevo_estado}")
 
-    # Registrar la transición en el historial (después del commit del estado)
-    await registrar_cambio_estado_action(
-        db,
-        caso_id=caso_id,
-        estado_anterior=estado_anterior.value if hasattr(estado_anterior, "value") else str(estado_anterior),
-        estado_nuevo=nuevo_estado,
-        cambiado_por="asistente",
+    estado_anterior = caso.estado
+    caso.estado = estado_valido
+
+    # Registrar la transición en el historial en la misma transacción
+    db.add(
+        HistorialEstado(
+            caso_id=caso_id,
+            estado_anterior=estado_anterior.value if hasattr(estado_anterior, "value") else str(estado_anterior),
+            estado_nuevo=estado_valido.value,
+            cambiado_por="asistente",
+        )
     )
 
+    await db.commit()
     await db.refresh(caso)
     return caso

@@ -17,7 +17,13 @@ async function request(url, options = {}) {
     headers['Content-Type'] = 'application/json';
   }
 
-  const res = await fetch(`${API}${url}`, { ...options, headers });
+  let res;
+  try {
+    res = await fetch(`${API}${url}`, { ...options, headers });
+  } catch {
+    throw new Error('No se pudo conectar con el servidor. Verifica que el backend esté corriendo (puerto 8000).');
+  }
+
   if (!res.ok) {
     const error = await res.json().catch(() => ({ detail: 'Error del servidor' }));
     throw new Error(error.detail || `Error ${res.status}`);
@@ -67,9 +73,26 @@ export async function crearCaso(payload) {
     periodo_academico: payload.periodo_academico,
     motivo: payload.motivo,
     tercero: payload.tercero || null,
+    descripcion_adjuntos: payload.descripcion_adjuntos || null,
   };
   const caso = await request('/casos/', { method: 'POST', body: JSON.stringify(body) });
+
+  // Subir los documentos de soporte después de crear el caso
+  const subidoPor = payload.esTercero ? 'tercero' : 'estudiante';
+  for (const archivo of payload.archivos || []) {
+    await subirArchivoPorCaso(caso.id, archivo, subidoPor, payload.descripcion_adjuntos);
+  }
+
   return normalizarCaso(caso);
+}
+
+async function subirArchivoPorCaso(numeroCaso, archivo, subidoPor, descripcion) {
+  const { db_id } = await getCaso(numeroCaso);
+  const formData = new FormData();
+  formData.append('archivo', archivo);
+  formData.append('subido_por', subidoPor);
+  if (descripcion) formData.append('descripcion', descripcion);
+  await request(`/casos/${db_id}/archivos/`, { method: 'POST', body: formData });
 }
 
 // Las funciones de escritura reciben el numero_caso (de la URL) y resuelven el id interno

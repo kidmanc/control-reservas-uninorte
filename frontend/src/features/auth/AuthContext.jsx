@@ -28,26 +28,28 @@ export function AuthProvider({ children }) {
   /**
    * Intenta iniciar sesión contra el backend FastAPI.
    *
-   * @returns {boolean} true si el login fue exitoso
+   * @returns {boolean} true si el login fue exitoso, false si credenciales incorrectas.
+   * @throws {Error} si no se pudo conectar con el servidor.
    */
   async function login(correo, password) {
+    let res;
     try {
-      const res = await fetch('/api/auth/login', {
+      res = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ correo, contrasena: password }),
       });
-
-      if (!res.ok) return false;
-
-      const { access_token, user: userData } = await res.json();
-      localStorage.setItem('token', access_token);
-      localStorage.setItem('user', JSON.stringify(userData));
-      setUser(userData);
-      return true;
     } catch {
-      return false;
+      throw new Error('No se pudo conectar con el servidor. Verifica que el backend esté corriendo (puerto 8000).');
     }
+
+    if (!res.ok) return false;
+
+    const { access_token, user: userData } = await res.json();
+    localStorage.setItem('token', access_token);
+    localStorage.setItem('user', JSON.stringify(userData));
+    setUser(userData);
+    return true;
   }
 
   function logout() {

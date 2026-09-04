@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
 from sqlalchemy.orm import DeclarativeBase
 from contextlib import asynccontextmanager
+import os
 
 from config import settings
 
@@ -25,6 +26,7 @@ async def get_db():
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
     # Crear tablas al iniciar
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)

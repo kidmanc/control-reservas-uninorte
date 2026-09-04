@@ -19,6 +19,7 @@ export default function ListaCasosPage() {
   const navigate = useNavigate();
   const [casos, setCasos] = useState([]);
   const [cargando, setCargando] = useState(true);
+  const [errorCarga, setErrorCarga] = useState(null);
   const [filtroEstado, setFiltroEstado] = useState(null); // null = todos
   const [filtroTipo, setFiltroTipo] = useState(null);
   const [soloTerceros, setSoloTerceros] = useState(false);
@@ -26,12 +27,19 @@ export default function ListaCasosPage() {
 
   useEffect(() => {
     let vigente = true;
-    listCasos().then((data) => {
-      if (vigente) {
-        setCasos(data);
-        setCargando(false);
-      }
-    });
+    listCasos()
+      .then((data) => {
+        if (vigente) {
+          setCasos(data);
+          setCargando(false);
+        }
+      })
+      .catch((err) => {
+        if (vigente) {
+          setErrorCarga(err.message || 'No se pudieron cargar los casos.');
+          setCargando(false);
+        }
+      });
     return () => {
       vigente = false;
     };
@@ -145,7 +153,12 @@ export default function ListaCasosPage() {
           </div>
 
           {cargando && <div className="empty-row">Cargando casos…</div>}
-          {!cargando && casosFiltrados.length === 0 && <div className="empty-row">No hay casos que coincidan con estos filtros.</div>}
+          {errorCarga && (
+            <div className="empty-row" style={{ color: 'var(--rechazado)' }}>{errorCarga}</div>
+          )}
+          {!cargando && !errorCarga && casosFiltrados.length === 0 && (
+            <div className="empty-row">No hay casos que coincidan con estos filtros.</div>
+          )}
 
           {!cargando &&
             casosFiltrados.map((caso) => (

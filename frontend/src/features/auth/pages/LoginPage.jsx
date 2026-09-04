@@ -31,6 +31,8 @@ export default function LoginPage() {
       } else {
         setError('Correo o contraseña incorrectos. Intenta de nuevo.');
       }
+    } catch (err) {
+      setError(err.message || 'No se pudo iniciar sesión.');
     } finally {
       setEnviando(false);
     }
