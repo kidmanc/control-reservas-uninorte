@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, Link } from 'react-router-dom';
 import PanelSidebar from '../../../components/layout/PanelSidebar';
 import EstadoBadge from '../../../components/ui/EstadoBadge';
 import TipoTag from '../../../components/ui/TipoTag';
@@ -84,6 +84,15 @@ export default function DetalleCasoPage() {
           <IconBack />
           Volver a todos los casos
         </button>
+
+        <Link
+          to={`/seguimiento/${caso.id}`}
+          target="_blank"
+          rel="noreferrer"
+          style={{ fontSize: 12.5, color: 'var(--azul)', fontWeight: 600, display: 'inline-block', marginBottom: 16 }}
+        >
+          Ver como lo ve el estudiante ↗
+        </Link>
 
         <div className="detail-grid">
           {/* Columna izquierda */}

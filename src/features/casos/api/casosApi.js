@@ -131,6 +131,31 @@ export async function cambiarEstado(id, nuevoEstado, { cambiadoPor = 'Carolina M
   return delay(casosEnMemoria.find((c) => c.id === id));
 }
 
+/**
+ * El estudiante (o el tercero) sube un archivo adicional desde la vista pública de
+ * seguimiento — típicamente para responder a un caso en estado "Falta documentación".
+ * Corresponde al mismo endpoint que subirArchivo en el panel interno
+ * (POST /api/casos/{id}/archivos), solo cambia quién lo llama.
+ */
+export async function subirArchivoEstudiante(id, archivo, descripcion) {
+  casosEnMemoria = casosEnMemoria.map((c) => {
+    if (c.id !== id) return c;
+    const nuevoArchivo = {
+      id: `f-${Date.now()}`,
+      nombre_archivo: archivo.name,
+      subido_por: 'estudiante',
+      descripcion: descripcion || null,
+      fecha: new Date().toISOString(),
+    };
+    return {
+      ...c,
+      archivos: [...c.archivos, nuevoArchivo],
+      fecha_ultima_actualizacion: nuevoArchivo.fecha,
+    };
+  });
+  return delay(casosEnMemoria.find((c) => c.id === id));
+}
+
 export async function agregarComentario(id, { texto, visible_para_estudiante, autor = 'Carolina Mejía' }) {
   casosEnMemoria = casosEnMemoria.map((c) => {
     if (c.id !== id) return c;

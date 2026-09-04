@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { crearCaso } from '../api/casosApi';
 import { TIPOS_SOLICITUD, TIPO_SOLICITUD_LABEL, PARENTESCOS } from '../constants';
 import { IconClock, IconInfo, IconUsers, IconUpload, IconCheckCircle, IconFile, IconArrowRight } from '../../../components/ui/icons';
@@ -95,6 +96,13 @@ export default function FormularioCasoPage() {
             Registramos tu caso con el número <span className="caso-id">{casoCreado.id}</span>. Te
             notificaremos por correo institucional cuando cambie el estado o recibas un comentario del área de
             Tesorería. Tiempo estimado de respuesta: 3 a 5 días hábiles.
+          </p>
+          <Link className="btn-primary" to={`/seguimiento/${casoCreado.id}`}>
+            Ver seguimiento de mi solicitud
+          </Link>
+          <p style={{ fontSize: 12, color: '#948f85', marginTop: 16 }}>
+            (En producción este acceso llega por correo institucional, con un enlace único — este botón es solo
+            para que puedas probarlo ahora)
           </p>
         </div>
       </div>
