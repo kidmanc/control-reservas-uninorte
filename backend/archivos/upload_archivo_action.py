@@ -6,23 +6,15 @@ from archivos.archivos_model import Archivo
 from casos.casos_model import Caso, EstadoCaso
 
 
-async def validar_carga_estudiante_action(
-    db: AsyncSession, caso_id: int, es_soporte_inicial: bool = False
-) -> None:
-    """Permite soportes iniciales al crear el caso y posteriores solo si fueron solicitados."""
+async def validar_carga_estudiante_action(db: AsyncSession, caso_id: int) -> None:
+    """Permite soportes posteriores solo cuando Tesorería los solicitó."""
     caso = await db.get(Caso, caso_id)
     if not caso:
         raise HTTPException(status_code=404, detail="Caso no encontrado")
-    estado_permitido = EstadoCaso.RECIBIDO if es_soporte_inicial else EstadoCaso.FALTA_DOCUMENTACION
-    if caso.estado != estado_permitido:
-        mensaje = (
-            "Los soportes iniciales solo pueden adjuntarse mientras el caso está en 'Recibido'."
-            if es_soporte_inicial
-            else "Solo puedes adjuntar documentos cuando el caso está en 'Falta documentación'."
-        )
+    if caso.estado != EstadoCaso.FALTA_DOCUMENTACION:
         raise HTTPException(
             status_code=409,
-            detail=mensaje,
+            detail="Solo puedes adjuntar documentos cuando el caso está en 'Falta documentación'.",
         )
 
 

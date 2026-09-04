@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from main import get_db
@@ -17,15 +17,14 @@ router = APIRouter(prefix="/api/casos/{caso_id}/archivos", tags=["archivos"])
 async def subir_archivo(
     caso_id: int,
     archivo: UploadFile = File(...),
-    subido_por: str = "estudiante",
-    descripcion: str | None = None,
-    es_soporte_inicial: bool = False,
+    subido_por: str = Form("estudiante"),
+    descripcion: str | None = Form(None),
     db: AsyncSession = Depends(get_db),
 ):
     if subido_por not in {"estudiante", "tercero"}:
         raise HTTPException(status_code=400, detail="Origen de archivo inválido")
 
-    await validar_carga_estudiante_controller(db, caso_id, es_soporte_inicial)
+    await validar_carga_estudiante_controller(db, caso_id)
     ruta = await guardar_archivo(archivo)
 
     data = {

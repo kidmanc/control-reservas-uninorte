@@ -1,4 +1,5 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
+from pydantic import ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from main import get_db
@@ -16,8 +17,28 @@ router = APIRouter(prefix="/api/casos", tags=["casos"])
 
 
 @router.post("/", response_model=CasoResponse)
-async def crear_caso(request: CasoCreate, db: AsyncSession = Depends(get_db)):
-    caso = await crear_caso_controller(db, request.model_dump(), request.tercero)
+async def crear_caso(
+    datos: str = Form(...),
+    archivos: list[UploadFile] = File(...),
+    db: AsyncSession = Depends(get_db),
+):
+    """Crea el caso y sus soportes iniciales como una sola operación."""
+    try:
+        request = CasoCreate.model_validate_json(datos)
+    except ValidationError as error:
+        raise HTTPException(status_code=422, detail=error.errors()) from error
+
+    if not archivos:
+        raise HTTPException(status_code=422, detail="Debes adjuntar al menos un documento de soporte")
+
+    subido_por = "tercero" if request.tercero else "estudiante"
+    caso = await crear_caso_controller(
+        db,
+        request.model_dump(),
+        request.tercero,
+        archivos,
+        subido_por,
+    )
     return caso
 
 

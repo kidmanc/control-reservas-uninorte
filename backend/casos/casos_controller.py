@@ -9,8 +9,14 @@ from casos.create_caso_action import (
 )
 
 
-async def crear_caso_controller(db: AsyncSession, data: dict, tercero: dict | None = None):
-    return await crear_caso_action(db, data, tercero)
+async def crear_caso_controller(
+    db: AsyncSession,
+    data: dict,
+    tercero: dict | None,
+    archivos,
+    subido_por: str,
+):
+    return await crear_caso_action(db, data, tercero, archivos, subido_por)
 
 
 async def listar_casos_controller(db: AsyncSession):

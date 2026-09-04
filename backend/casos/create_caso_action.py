@@ -3,10 +3,18 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi import HTTPException
 
 from casos.casos_model import Caso, EstadoCaso
+from archivos.archivos_model import Archivo
+from archivos.storage import eliminar_archivos, guardar_archivo
 from historial.historial_model import HistorialEstado
 
 
-async def crear_caso_action(db: AsyncSession, data: dict, tercero: dict | None = None) -> Caso:
+async def crear_caso_action(
+    db: AsyncSession,
+    data: dict,
+    tercero: dict | None,
+    archivos,
+    subido_por: str,
+) -> Caso:
     # Una solicitud del mismo tipo para el mismo período solo puede existir una vez.
     duplicado = await db.execute(
         select(Caso).where(
@@ -50,18 +58,37 @@ async def crear_caso_action(db: AsyncSession, data: dict, tercero: dict | None =
         caso.tercero_telefono = tercero.get("telefono_contacto")
         caso.tercero_correo = tercero.get("correo_contacto")
 
-    db.add(caso)
-    await db.flush()
-    db.add(
-        HistorialEstado(
-            caso_id=caso.id,
-            estado_anterior=None,
-            estado_nuevo=EstadoCaso.RECIBIDO.value,
-            cambiado_por="sistema",
-            descripcion="Solicitud recibida",
+    rutas_guardadas: list[str] = []
+    try:
+        db.add(caso)
+        await db.flush()
+        db.add(
+            HistorialEstado(
+                caso_id=caso.id,
+                estado_anterior=None,
+                estado_nuevo=EstadoCaso.RECIBIDO.value,
+                cambiado_por="sistema",
+                descripcion="Solicitud recibida",
+            )
         )
-    )
-    await db.commit()
+        for archivo_subido in archivos:
+            ruta = await guardar_archivo(archivo_subido)
+            rutas_guardadas.append(ruta)
+            db.add(
+                Archivo(
+                    caso_id=caso.id,
+                    subido_por=subido_por,
+                    nombre_archivo=archivo_subido.filename or "archivo",
+                    ruta_almacenamiento=ruta,
+                    descripcion=data.get("descripcion_adjuntos"),
+                )
+            )
+        await db.commit()
+    except Exception:
+        await db.rollback()
+        eliminar_archivos(rutas_guardadas)
+        raise
+
     await db.refresh(caso)
     return caso
 

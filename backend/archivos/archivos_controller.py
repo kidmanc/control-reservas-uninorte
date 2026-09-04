@@ -7,10 +7,8 @@ from archivos.upload_archivo_action import (
 )
 
 
-async def validar_carga_estudiante_controller(
-    db: AsyncSession, caso_id: int, es_soporte_inicial: bool = False
-):
-    return await validar_carga_estudiante_action(db, caso_id, es_soporte_inicial)
+async def validar_carga_estudiante_controller(db: AsyncSession, caso_id: int):
+    return await validar_carga_estudiante_action(db, caso_id)
 
 
 async def subir_archivo_controller(db: AsyncSession, caso_id: int, data: dict):

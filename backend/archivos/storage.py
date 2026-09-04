@@ -32,3 +32,14 @@ async def guardar_archivo(archivo: UploadFile) -> str:
         f.write(contenido)
 
     return ruta
+
+
+def eliminar_archivos(rutas: list[str]) -> None:
+    """Elimina archivos que no pudieron asociarse a un caso confirmado."""
+    for ruta in rutas:
+        try:
+            if os.path.commonpath([os.path.abspath(settings.UPLOAD_DIR), os.path.abspath(ruta)]) == os.path.abspath(settings.UPLOAD_DIR):
+                os.remove(ruta)
+        except OSError:
+            # La operación principal ya falló; no ocultar su error por una limpieza fallida.
+            pass

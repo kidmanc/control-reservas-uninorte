@@ -75,24 +75,14 @@ export async function crearCaso(payload) {
     tercero: payload.tercero || null,
     descripcion_adjuntos: payload.descripcion_adjuntos || null,
   };
-  const caso = await request('/casos/', { method: 'POST', body: JSON.stringify(body) });
-
-  // Subir los documentos de soporte después de crear el caso
-  const subidoPor = payload.esTercero ? 'tercero' : 'estudiante';
+  const formData = new FormData();
+  formData.append('datos', JSON.stringify(body));
   for (const archivo of payload.archivos || []) {
-    await subirArchivoPorCaso(caso.id, archivo, subidoPor, payload.descripcion_adjuntos, true);
+    formData.append('archivos', archivo);
   }
+  const caso = await request('/casos/', { method: 'POST', body: formData });
 
   return normalizarCaso(caso);
-}
-
-async function subirArchivoPorCaso(casoId, archivo, subidoPor, descripcion, esSoporteInicial = false) {
-  const formData = new FormData();
-  formData.append('archivo', archivo);
-  formData.append('subido_por', subidoPor);
-  if (esSoporteInicial) formData.append('es_soporte_inicial', 'true');
-  if (descripcion) formData.append('descripcion', descripcion);
-  await request(`/casos/${casoId}/archivos/`, { method: 'POST', body: formData });
 }
 
 // Las funciones de escritura reciben el numero_caso (de la URL) y resuelven el id interno
