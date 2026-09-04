@@ -130,6 +130,7 @@ export default function SeguimientoCasoPage() {
 
   const comentariosVisibles = caso.comentarios.filter((c) => c.visible_para_estudiante);
   const esFinal = ESTADOS_FINALES.includes(caso.estado);
+  const puedeAdjuntarDocumentos = caso.estado === ESTADOS.FALTA_DOCUMENTACION;
 
   return (
     <div className="student-page">
@@ -243,7 +244,7 @@ export default function SeguimientoCasoPage() {
             </div>
           ))}
 
-          {!esFinal && (
+          {puedeAdjuntarDocumentos && (
             <div style={{ marginTop: 16 }}>
               <label className="upload-zone" style={{ display: 'block' }}>
                 <div className="upload-icon">

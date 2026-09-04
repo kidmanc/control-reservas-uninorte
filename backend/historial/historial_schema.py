@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from pydantic import BaseModel
 
 
@@ -8,7 +10,7 @@ class HistorialResponse(BaseModel):
     estado_nuevo: str
     cambiado_por: str
     descripcion: str | None = None
-    fecha: str
+    fecha: datetime | None = None
 
     class Config:
         from_attributes = True

@@ -25,5 +25,11 @@ async def obtener_caso_por_numero_controller(db: AsyncSession, numero: str):
     return await obtener_caso_por_numero_action(db, numero)
 
 
-async def cambiar_estado_controller(db: AsyncSession, caso_id: int, nuevo_estado: str):
-    return await cambiar_estado_action(db, caso_id, nuevo_estado)
+async def cambiar_estado_controller(
+    db: AsyncSession,
+    caso_id: int,
+    nuevo_estado: str,
+    cambiado_por: str,
+    descripcion: str | None = None,
+):
+    return await cambiar_estado_action(db, caso_id, nuevo_estado, cambiado_por, descripcion)

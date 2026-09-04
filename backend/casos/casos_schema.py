@@ -1,5 +1,9 @@
-from pydantic import BaseModel
+import re
+
+from pydantic import BaseModel, Field, field_validator
 from datetime import datetime
+
+from config import settings
 
 from comentarios.comentarios_schema import ComentarioResponse
 from archivos.archivos_schema import ArchivoResponse
@@ -15,6 +19,19 @@ class CasoBase(BaseModel):
     tipo_solicitud: str
     periodo_academico: str
     motivo: str
+
+    @field_validator("correo_institucional")
+    @classmethod
+    def validar_correo_institucional(cls, correo: str) -> str:
+        correo_normalizado = correo.strip().lower()
+        if not re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+", correo_normalizado):
+            raise ValueError("Ingresa un correo electrónico válido")
+
+        dominio = settings.INSTITUTIONAL_EMAIL_DOMAIN.lower()
+        if correo_normalizado.rsplit("@", 1)[-1] != dominio:
+            raise ValueError(f"El correo debe pertenecer al dominio @{dominio}")
+
+        return correo_normalizado
 
 
 class CasoCreate(CasoBase):
@@ -40,9 +57,9 @@ class CasoResponse(CasoBase):
 
 
 class CasoDetalle(CasoResponse):
-    comentarios: list[ComentarioResponse] = []
-    archivos: list[ArchivoResponse] = []
-    historial_estados: list[HistorialResponse] = []
+    comentarios: list[ComentarioResponse] = Field(default_factory=list)
+    archivos: list[ArchivoResponse] = Field(default_factory=list)
+    historial_estados: list[HistorialResponse] = Field(default_factory=list)
 
 
 class CambiarEstadoRequest(BaseModel):

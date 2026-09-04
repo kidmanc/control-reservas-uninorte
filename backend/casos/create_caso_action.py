@@ -7,6 +7,24 @@ from historial.historial_model import HistorialEstado
 
 
 async def crear_caso_action(db: AsyncSession, data: dict, tercero: dict | None = None) -> Caso:
+    # Una solicitud del mismo tipo para el mismo período solo puede existir una vez.
+    duplicado = await db.execute(
+        select(Caso).where(
+            Caso.codigo_estudiantil == data["codigo_estudiantil"],
+            Caso.tipo_solicitud == data["tipo_solicitud"],
+            Caso.periodo_academico == data["periodo_academico"],
+        )
+    )
+    caso_existente = duplicado.scalar_one_or_none()
+    if caso_existente:
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                "Ya existe una solicitud de este tipo para el período indicado "
+                f"(caso {caso_existente.numero_caso})."
+            ),
+        )
+
     # Generar número de caso
     result = await db.execute(select(func.count(Caso.id)))
     count = result.scalar() or 0
@@ -33,6 +51,16 @@ async def crear_caso_action(db: AsyncSession, data: dict, tercero: dict | None =
         caso.tercero_correo = tercero.get("correo_contacto")
 
     db.add(caso)
+    await db.flush()
+    db.add(
+        HistorialEstado(
+            caso_id=caso.id,
+            estado_anterior=None,
+            estado_nuevo=EstadoCaso.RECIBIDO.value,
+            cambiado_por="sistema",
+            descripcion="Solicitud recibida",
+        )
+    )
     await db.commit()
     await db.refresh(caso)
     return caso
@@ -53,7 +81,13 @@ async def obtener_caso_por_numero_action(db: AsyncSession, numero: str) -> Caso 
     return result.scalar_one_or_none()
 
 
-async def cambiar_estado_action(db: AsyncSession, caso_id: int, nuevo_estado: str) -> Caso | None:
+async def cambiar_estado_action(
+    db: AsyncSession,
+    caso_id: int,
+    nuevo_estado: str,
+    cambiado_por: str,
+    descripcion: str | None = None,
+) -> Caso | None:
     caso = await obtener_caso_action(db, caso_id)
     if not caso:
         return None
@@ -73,7 +107,8 @@ async def cambiar_estado_action(db: AsyncSession, caso_id: int, nuevo_estado: st
             caso_id=caso_id,
             estado_anterior=estado_anterior.value if hasattr(estado_anterior, "value") else str(estado_anterior),
             estado_nuevo=estado_valido.value,
-            cambiado_por="asistente",
+            cambiado_por=cambiado_por,
+            descripcion=descripcion,
         )
     )
 

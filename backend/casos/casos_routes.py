@@ -45,7 +45,13 @@ async def obtener_caso_por_numero(numero: str, db: AsyncSession = Depends(get_db
 
 @router.patch("/{caso_id}/estado", response_model=CasoResponse)
 async def cambiar_estado(caso_id: int, request: CambiarEstadoRequest, db: AsyncSession = Depends(get_db), user: dict = Depends(get_current_user)):
-    caso = await cambiar_estado_controller(db, caso_id, request.nuevo_estado)
+    caso = await cambiar_estado_controller(
+        db,
+        caso_id,
+        request.nuevo_estado,
+        cambiado_por=user["nombre"],
+        descripcion=request.descripcion,
+    )
     if not caso:
         raise HTTPException(status_code=404, detail="Caso no encontrado")
     return caso

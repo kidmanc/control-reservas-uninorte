@@ -15,6 +15,10 @@ class Settings(BaseSettings):
     # JWT — usar variable de entorno SECRET_KEY en producción
     SECRET_KEY: str = "dev-solo-no-usar-en-produccion-cambiar"
 
+    # Dominio permitido para los correos institucionales de estudiantes.
+    # Puede sobreescribirse desde .env sin cambiar el código.
+    INSTITUTIONAL_EMAIL_DOMAIN: str = "uninorte.edu.co"
+
     @property
     def DATABASE_URL(self) -> str:
         return f"sqlite+aiosqlite:///{self.DB_PATH}"

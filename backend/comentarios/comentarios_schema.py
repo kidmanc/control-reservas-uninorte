@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from pydantic import BaseModel
 
 
@@ -13,7 +15,7 @@ class ComentarioResponse(BaseModel):
     autor: str
     texto: str
     visible_para_estudiante: bool
-    fecha: str
+    fecha: datetime | None = None
 
     class Config:
         from_attributes = True

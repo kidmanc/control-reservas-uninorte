@@ -10,7 +10,7 @@ EXTENSIONES_PERMITIDAS = {".pdf", ".jpg", ".jpeg", ".png"}
 TAMANO_MAXIMO_BYTES = 10 * 1024 * 1024  # 10 MB
 
 
-def guardar_archivo(archivo: UploadFile) -> str:
+async def guardar_archivo(archivo: UploadFile) -> str:
     """Valida tipo/tamaño y persiste el archivo, devolviendo la ruta de almacenamiento."""
     ext = os.path.splitext(archivo.filename or "")[1].lower()
 
@@ -20,7 +20,7 @@ def guardar_archivo(archivo: UploadFile) -> str:
             detail="Tipo de archivo no permitido. Usa PDF, JPG o PNG.",
         )
 
-    contenido = archivo.file.read()
+    contenido = await archivo.read()
     if len(contenido) > TAMANO_MAXIMO_BYTES:
         raise HTTPException(status_code=400, detail="El archivo supera el máximo de 10 MB.")
 
