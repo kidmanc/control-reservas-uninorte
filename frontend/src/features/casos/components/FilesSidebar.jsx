@@ -12,6 +12,14 @@ export default function FilesSidebar({ archivos, onVerArchivo, archivoAbriendoId
         const esSoporteRepresentacion = (archivo.descripcion ?? '').toLowerCase().includes('representación');
         return (
           <div className="attach-item" key={archivo.id}>
+            <button
+              type="button"
+              className="attach-file-trigger"
+              onClick={() => onVerArchivo(archivo)}
+              disabled={archivoAbriendoId === archivo.id}
+              aria-label={`Abrir o descargar ${archivo.nombre_archivo}`}
+              title="Abrir o descargar archivo"
+            >
             <div
               className="attach-icon"
               style={
@@ -23,20 +31,12 @@ export default function FilesSidebar({ archivos, onVerArchivo, archivoAbriendoId
               {esSoporteRepresentacion ? <IconCheckCircle /> : <IconFile />}
             </div>
             <div style={{ flex: 1 }}>
-              <div className="attach-name">{archivo.nombre_archivo}</div>
+              <div className="attach-name">{archivoAbriendoId === archivo.id ? 'Abriendo archivo…' : archivo.nombre_archivo}</div>
               <div className="attach-desc">
                 {archivo.descripcion ? `${archivo.descripcion} · ` : ''}
                 Subido por {archivo.subido_por === 'tercero' ? 'el tercero' : 'el estudiante'}
               </div>
             </div>
-            <button
-              type="button"
-              className="btn-secondary"
-              style={{ padding: '7px 10px', fontSize: 12 }}
-              onClick={() => onVerArchivo(archivo)}
-              disabled={archivoAbriendoId === archivo.id}
-            >
-              {archivoAbriendoId === archivo.id ? 'Abriendo…' : 'Ver / descargar'}
             </button>
           </div>
         );

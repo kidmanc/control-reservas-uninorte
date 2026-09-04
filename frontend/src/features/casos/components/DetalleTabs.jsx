@@ -23,7 +23,7 @@ function IconClockDot() {
   );
 }
 
-export default function DetalleTabs({ caso }) {
+export default function DetalleTabs({ caso, onVerArchivo, archivoAbriendoId }) {
   const [tab, setTab] = useState('trazabilidad');
 
   return (
@@ -42,7 +42,13 @@ export default function DetalleTabs({ caso }) {
 
       {tab === 'trazabilidad' && <Trazabilidad historial={caso.historial_estados} />}
       {tab === 'comentarios' && <Comentarios comentarios={caso.comentarios} />}
-      {tab === 'archivos' && <Archivos archivos={caso.archivos} />}
+      {tab === 'archivos' && (
+        <Archivos
+          archivos={caso.archivos}
+          onVerArchivo={onVerArchivo}
+          archivoAbriendoId={archivoAbriendoId}
+        />
+      )}
     </div>
   );
 }
@@ -96,7 +102,7 @@ function Comentarios({ comentarios }) {
   );
 }
 
-function Archivos({ archivos }) {
+function Archivos({ archivos, onVerArchivo, archivoAbriendoId }) {
   if (archivos.length === 0) {
     return <p className="empty-hint">Este caso todavía no tiene archivos adjuntos.</p>;
   }
@@ -104,16 +110,25 @@ function Archivos({ archivos }) {
     <>
       {archivos.map((a) => (
         <div className="attach-item" key={a.id}>
+          <button
+            type="button"
+            className="attach-file-trigger"
+            onClick={() => onVerArchivo(a)}
+            disabled={archivoAbriendoId === a.id}
+            aria-label={`Abrir o descargar ${a.nombre_archivo}`}
+            title="Abrir o descargar archivo"
+          >
           <div className="attach-icon" style={{ background: 'var(--verde-bg)', color: 'var(--verde)' }}>
             <IconFile />
           </div>
           <div style={{ flex: 1 }}>
-            <div className="attach-name">{a.nombre_archivo}</div>
+            <div className="attach-name">{archivoAbriendoId === a.id ? 'Abriendo archivo…' : a.nombre_archivo}</div>
             <div className="attach-desc">
               {a.descripcion ? `${a.descripcion} · ` : ''}
               Subido por {a.subido_por === 'tercero' ? 'el tercero' : 'el estudiante'} · {formatFecha(a.fecha)}
             </div>
           </div>
+          </button>
         </div>
       ))}
     </>

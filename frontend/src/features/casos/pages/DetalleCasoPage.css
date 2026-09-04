@@ -67,6 +67,11 @@
 .attach-item { display: flex; align-items: center; gap: 10px; padding: 10px; border-radius: 10px; border: 1px solid var(--border); margin-bottom: 8px; }
 .attach-icon { width: 34px; height: 34px; border-radius: 8px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
 .attach-name { font-size: 12.5px; font-weight: 600; }
+.attach-file-trigger { display: flex; align-items: center; gap: 10px; width: 100%; min-width: 0; padding: 0; border: 0; background: transparent; color: inherit; text-align: left; cursor: pointer; font: inherit; }
+.attach-file-trigger:hover .attach-name { color: var(--azul); text-decoration: underline; }
+.attach-file-trigger:hover .attach-icon { filter: brightness(.96); }
+.attach-file-trigger:focus-visible { outline: 2px solid var(--azul); outline-offset: 3px; border-radius: 7px; }
+.attach-file-trigger:disabled { cursor: wait; opacity: .7; }
 .attach-desc { font-size: 11px; color: #948f85; }
 .empty-hint { font-size: 12.5px; color: #948f85; }
 

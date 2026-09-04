@@ -212,7 +212,11 @@ export default function DetalleCasoPage() {
               </div>
             </div>
 
-            <DetalleTabs caso={caso} />
+            <DetalleTabs
+              caso={caso}
+              onVerArchivo={onVerArchivo}
+              archivoAbriendoId={archivoAbriendoId}
+            />
           </div>
 
           {/* Columna derecha */}
