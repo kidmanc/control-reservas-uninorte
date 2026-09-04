@@ -1,4 +1,5 @@
 from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, Enum as SAEnum
+from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 import enum
 
@@ -43,3 +44,8 @@ class Caso(Base):
 
     fecha_creacion = Column(DateTime(timezone=True), server_default=func.now())
     fecha_ultima_actualizacion = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+    # Relaciones
+    comentarios = relationship("Comentario", back_populates="caso", lazy="selectin")
+    archivos = relationship("Archivo", back_populates="caso", lazy="selectin")
+    historial_estados = relationship("HistorialEstado", back_populates="caso", lazy="selectin")

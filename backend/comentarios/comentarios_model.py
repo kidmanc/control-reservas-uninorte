@@ -1,4 +1,5 @@
 from sqlalchemy import Column, Integer, String, Text, Boolean, DateTime, ForeignKey
+from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 
 from main import Base
@@ -13,3 +14,5 @@ class Comentario(Base):
     texto = Column(Text, nullable=False)
     visible_para_estudiante = Column(Boolean, default=True)
     fecha = Column(DateTime(timezone=True), server_default=func.now())
+
+    caso = relationship("Caso", back_populates="comentarios")
