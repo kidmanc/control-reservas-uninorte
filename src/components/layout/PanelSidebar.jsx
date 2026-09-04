@@ -4,7 +4,6 @@ import './PanelSidebar.css';
 
 const NAV_ITEMS = [
   { to: '/panel', label: 'Casos', end: true },
-  { to: '/panel/tipos', label: 'Tipos de solicitud' },
   { to: '/panel/reportes', label: 'Reportes' },
   { to: '/panel/configuracion', label: 'Configuración' },
 ];

@@ -1,72 +1,107 @@
-# Casos Especiales — Tesorería (frontend)
+# Casos Especiales — Tesorería Uninorte
 
-Frontend real (React + Vite) para la gestión de casos de reserva de matrícula y devolución
-del área de Tesorería. Construido directamente sobre el mockup aprobado
-(`mockup_casos_especiales.html`): mismos tokens de color, tipografía y componentes.
+Sistema de gestión de casos de reserva de matrícula y devolución del área de Tesorería.
 
-## Arrancar en GitHub Codespaces / local
+## Estructura del proyecto
+
+```
+control-reservas-uninorte/
+├── frontend/          ← React + Vite (puerto 5173)
+├── backend/           ← FastAPI + SQLAlchemy + PostgreSQL (puerto 8000)
+├── docker-compose.yml ← PostgreSQL + backend
+└── README.md
+```
+
+## Arrancar el backend
 
 ```bash
+cd backend
+pip install -r requirements.txt
+uvicorn main:app --reload --port 8000
+```
+
+O con Docker:
+
+```bash
+cd backend
+docker-compose up -d
+```
+
+La API estará en `http://localhost:8000/docs` (Swagger UI).
+
+### Usuario semilla
+
+```bash
+cd backend
+python seed.py
+```
+
+- Correo: `carolina.mejia@uninorte.edu.co`
+- Contraseña: `password123`
+
+## Arrancar el frontend
+
+```bash
+cd frontend  # o la raíz si no existe frontend/
 npm install
 npm run dev
 ```
 
-Abre el puerto que indique Vite (Codespaces lo reenvía automáticamente). Rutas:
+Rutas:
 
-- `/` — formulario público (estudiante o tercero en su representación)
-- `/panel` — lista de casos del área de Tesorería, con filtros por estado/tipo/búsqueda
-- `/panel/casos/:id` — detalle de un caso (trazabilidad, comentarios, archivos, cambio de estado)
+- `/` — formulario público (estudiante o tercero)
+- `/login` — login del panel interno
+- `/panel` — lista de casos (requiere login)
+- `/panel/casos/:id` — detalle de caso
+- `/seguimiento/:id` — seguimiento público
 
-## Estado actual
+## API Endpoints
 
-**Con esto ya se puede navegar y probar el flujo completo end-to-end usando datos en memoria**
-(`src/features/casos/mock/mockCasos.js` + `src/features/casos/api/casosApi.js`). No hay
-backend todavía — ver la sección "Conectar con el backend" abajo.
+| Método | Endpoint | Descripción | Auth |
+|--------|----------|-------------|------|
+| POST | `/api/auth/login` | Iniciar sesión | No |
+| GET | `/api/auth/me` | Usuario actual | Sí |
+| POST | `/api/casos/` | Crear caso | No |
+| GET | `/api/casos/` | Listar casos | Sí |
+| GET | `/api/casos/{id}` | Detalle caso | No |
+| PATCH | `/api/casos/{id}/estado` | Cambiar estado | Sí |
+| POST | `/api/casos/{id}/comentarios/` | Agregar comentario | No |
+| GET | `/api/casos/{id}/comentarios/` | Listar comentarios | No |
+| POST | `/api/casos/{id}/archivos/` | Subir archivo | No |
+| GET | `/api/casos/{id}/archivos/` | Listar archivos | No |
+| GET | `/api/casos/{id}/historial/` | Historial de estados | No |
 
-Lo que sí funciona ahora mismo, contra los datos mock:
-- Crear un caso desde el formulario (como estudiante o como tercero) → aparece en `/panel`.
-- Filtrar la lista por estado (tarjetas), tipo de solicitud, "diligenciado por tercero" y búsqueda de texto.
-- Abrir un caso, cambiar su estado (queda registrado en la trazabilidad) y agregar comentarios
-  (internos o visibles para el estudiante).
+## Arquitectura del backend
 
-Lo que falta (fuera del alcance de "solo frontend"):
-- Autenticación real (login institucional) — el usuario "Carolina Mejía" está harcodeado en
-  `src/components/layout/PanelSidebar.jsx`.
-- Subida real de archivos (hoy solo se guarda el nombre/tamaño en memoria, no el archivo).
-- Notificaciones por correo.
-- Las rutas "Tipos de solicitud", "Reportes" y "Configuración" del sidebar (placeholders, ver TODO en `App.jsx`).
-- Creación manual de caso por la asistente (botón "Nuevo caso manual" en `/panel`, sin acción aún).
-
-## Estructura de carpetas
+Clean Architecture con 5 capas, agrupadas por modelo:
 
 ```
-src/
-  styles/            tokens.css (paleta/tipografía tomada del mockup) + global.css
-  components/
-    layout/           PanelSidebar (nav del panel interno)
-    ui/                EstadoBadge, TipoTag, icons.jsx (SVGs compartidos)
-  features/
-    casos/
-      constants.js     enums de estado y tipo de solicitud — única fuente de verdad
-      api/casosApi.js  capa de datos: HOY mocks, MAÑANA fetch a FastAPI (mismo contrato)
-      mock/            datos de ejemplo, mismo shape que el modelo de datos del backend
-      pages/           FormularioCasoPage, ListaCasosPage, DetalleCasoPage
-      components/      subcomponentes de la página de detalle (StatusChanger, FilesSidebar, etc.)
+backend/
+├── casos/
+│   ├── casos_routes.py        ← Capa 2: Define endpoints
+│   ├── casos_controller.py    ← Capa 3: Orquesta acciones
+│   ├── casos_model.py         ← Capa 5: SQLAlchemy model
+│   ├── casos_schema.py        ← Pydantic schemas
+│   ├── create_caso_action.py  ← Capa 4: Lógica de negocio
+│   └� ...
+├── auth/
+├── comentarios/
+├── archivos/
+├── historial/
+└── usuarios/
 ```
 
-La organización sigue la misma idea de "capas por modelo" que la arquitectura del backend
-(cada feature agrupa sus rutas/páginas, su capa de datos y sus componentes, en vez de una
-carpeta global `pages/` + una global `api/`).
+## Conectar frontend con backend
 
-## Conectar con el backend (FastAPI)
+Todo el acceso a datos pasa por `src/features/casos/api/casosApi.js`. Para conectar:
 
-Todo el acceso a datos pasa por `src/features/casos/api/casosApi.js`. Cada función de ese
-archivo ya tiene documentado el endpoint REST al que corresponde. Para conectar el backend
-real, solo hay que reemplazar el cuerpo de esas funciones por `fetch('/api/...')` — ningún
-componente de página necesita cambiar, porque todos consumen `casosApi`, nunca los mocks
-directamente.
+1. Configurar proxy en `vite.config.js`:
+```js
+server: {
+  proxy: {
+    '/api': 'http://localhost:8000'
+  }
+}
+```
 
-Cuando eso pase, probablemente convenga:
-1. Configurar `VITE_API_URL` en `.env` y un proxy de Vite hacia el backend en dev.
-2. Manejar estados de error de red en las páginas (hoy asumen que la promesa siempre resuelve).
-3. Reemplazar la subida de archivos simulada por `FormData` real hacia el endpoint de archivos.
+2. Reemplazar mocks en `casosApi.js` por `fetch('/api/...')`.
