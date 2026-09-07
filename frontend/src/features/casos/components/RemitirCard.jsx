@@ -187,7 +187,7 @@ export default function RemitirCard({ caso, destinatarios, onRemitir, remitiendo
 
       {esTenedor && renderPasos()}
 
-      {!esTenedor && esTesoreria && tenedor && (
+      {!esTenedor && actor?.rol === 'admin' && tenedor && (
         <>
           <p className="empty-hint" style={{ marginTop: 8 }}>
             Está {ESPERA_POR_ROL[tenedor.rol] || 'en revisión.'}
@@ -197,6 +197,12 @@ export default function RemitirCard({ caso, destinatarios, onRemitir, remitiendo
             {renderPasos()}
           </details>
         </>
+      )}
+
+      {!esTenedor && actor?.rol !== 'admin' && tenedor && esTesoreria && (
+        <p className="empty-hint" style={{ marginTop: 8 }}>
+          Está {ESPERA_POR_ROL[tenedor.rol] || 'en revisión.'} Solo la tesorera puede reasignarlo.
+        </p>
       )}
 
       {!esTenedor && !esTesoreria && (

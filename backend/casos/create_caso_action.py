@@ -248,6 +248,13 @@ async def remitir_caso_action(
             status_code=403,
             detail="Solo puedes remitir los casos que tienes en tus manos.",
         )
+    # La asistente opera dentro del flujo: solo mueve casos que están en
+    # Tesorería. Reasignar un caso ajeno es corrección de la tesorera (admin).
+    if rol_actor == "asistente_tesoreria" and caso.revisor_asignado_id is not None:
+        raise HTTPException(
+            status_code=403,
+            detail="El caso está en manos de otro paso del flujo. Solo la tesorera puede reasignarlo.",
+        )
 
     if revisor_id is None:
         rol_destino = None
