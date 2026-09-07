@@ -19,7 +19,8 @@ const ESTADO_STAT_COLOR = {
 export default function ListaCasosPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const esRevisor = user?.rol === 'revisor';
+  // Quien opera en el flujo solo ve sus casos asignados (lo filtra el backend).
+  const esOperador = ['revisor', 'centro_medico', 'aprobador'].includes(user?.rol);
   const [casos, setCasos] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [errorCarga, setErrorCarga] = useState(null);
@@ -82,12 +83,12 @@ export default function ListaCasosPage() {
           <div>
             <h1>Casos especiales</h1>
             <div className="sub">
-              {esRevisor
-                ? 'Solo ves los casos que Tesorería te remitió para revisión'
+              {esOperador
+                ? 'Solo ves los casos que tienes en tus manos para revisión'
                 : 'Reservas de matrícula por causa especial y devoluciones — gestión y trazabilidad'}
             </div>
           </div>
-          {!esRevisor && (
+          {!esOperador && (
             <button className="btn-primary" style={{ background: 'var(--negro)' }} onClick={() => navigate('/panel/casos/nueva')}>
               <IconPlus />
               Nuevo caso manual

@@ -61,8 +61,8 @@ async def descargar_archivo(
     if not archivo:
         raise HTTPException(status_code=404, detail="Archivo no encontrado")
 
-    # El revisor solo descarga soportes de los casos que le fueron remitidos.
-    if user.get("rol") == "revisor":
+    # Quien opera en el flujo solo descarga soportes de sus casos asignados.
+    if user.get("rol") in {"revisor", "centro_medico", "aprobador"}:
         await exigir_acceso_caso_controller(db, caso_id, user)
 
     directorio = os.path.abspath(settings.UPLOAD_DIR)

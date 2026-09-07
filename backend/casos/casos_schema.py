@@ -46,6 +46,7 @@ class CasoResponse(CasoBase):
     estado: str
     asistente_asignada_id: int | None = None
     revisor_asignado_id: int | None = None
+    remitido_por_id: int | None = None
     porcentaje_aplicado: float | None = None
     destino_devolucion: str | None = None
     tercero_nombre: str | None = None
@@ -100,6 +101,11 @@ class ActualizarDecisionRequest(BaseModel):
 
 
 class RemitirCasoRequest(BaseModel):
-    """Remite el caso a un revisor. Con `revisor_id` nulo se retira la remisión."""
+    """Mueve el caso al siguiente paso del flujo.
+
+    Con `revisor_id` nulo el caso vuelve a Tesorería (Mónica). Las devoluciones
+    exigen `motivo` (queda como comentario interno además del historial).
+    """
 
     revisor_id: int | None = None
+    motivo: str | None = None

@@ -2,7 +2,7 @@ import { TIPOS_SOLICITUD, PORCENTAJES_POR_TIPO, DESTINO_DEVOLUCION_LABEL, DESTIN
 import { IconPercent } from '../../../components/ui/icons';
 import './DecisionCard.css';
 
-export default function DecisionCard({ caso, onCambiar, guardando }) {
+export default function DecisionCard({ caso, onCambiar, guardando, soloLectura = false }) {
   const opciones = PORCENTAJES_POR_TIPO[caso.tipo_solicitud] || [];
   const esDevolucion = caso.tipo_solicitud === TIPOS_SOLICITUD.DEVOLUCION;
   const porcentajeActual = caso.porcentaje_aplicado;
@@ -14,6 +14,9 @@ export default function DecisionCard({ caso, onCambiar, guardando }) {
         Decisión de Tesorería
       </h3>
       <p className="empty-hint">Porcentaje aplicado para {esDevolucion ? 'la devolución' : 'la reserva de matrícula'}.</p>
+      {soloLectura && (
+        <p className="empty-hint">Los porcentajes los confirma el aprobador final (JG) al aprobar el caso.</p>
+      )}
 
       <div className="decision-select">
         {opciones.map((opcion) => (
@@ -21,7 +24,7 @@ export default function DecisionCard({ caso, onCambiar, guardando }) {
             key={opcion.valor}
             type="button"
             className={`decision-option${porcentajeActual === opcion.valor ? ' selected' : ''}`}
-            disabled={guardando}
+            disabled={guardando || soloLectura}
             onClick={() => onCambiar({ porcentaje_aplicado: opcion.valor })}
           >
             {opcion.etiqueta}
@@ -34,7 +37,7 @@ export default function DecisionCard({ caso, onCambiar, guardando }) {
           <label>Destino de la devolución</label>
           <select
             value={caso.destino_devolucion || ''}
-            disabled={guardando}
+            disabled={guardando || soloLectura}
             onChange={(e) => onCambiar({ destino_devolucion: e.target.value })}
           >
             <option value="">Selecciona el destino</option>

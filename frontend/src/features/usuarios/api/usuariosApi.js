@@ -40,6 +40,6 @@ export async function actualizarUsuario(id, cambios) {
   });
 }
 
-export async function listarRevisores() {
-  return request('/usuarios/revisores');
+export async function listarDestinatarios() {
+  return request('/usuarios/destinatarios');
 }

@@ -114,11 +114,11 @@ export async function actualizarCasoDecision(numeroCaso, cambios) {
   return getCaso(numeroCaso);
 }
 
-export async function remitirCaso(numeroCaso, revisorId) {
+export async function remitirCaso(numeroCaso, revisorId, motivo = null) {
   const { db_id } = await getCaso(numeroCaso);
   await request(`/casos/${db_id}/remitir`, {
     method: 'PATCH',
-    body: JSON.stringify({ revisor_id: revisorId }),
+    body: JSON.stringify({ revisor_id: revisorId, motivo }),
   });
   return getCaso(numeroCaso);
 }

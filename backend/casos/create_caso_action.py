@@ -4,9 +4,22 @@ from fastapi import HTTPException
 
 from casos.casos_model import Caso, EstadoCaso, TipoSolicitud
 from usuarios.usuarios_model import Usuario
+from comentarios.comentarios_model import Comentario
 from archivos.archivos_model import Archivo
 from archivos.storage import eliminar_archivos, guardar_archivo
 from historial.historial_model import HistorialEstado
+
+# Roles con visibilidad restringida: solo ven los casos que tienen asignados.
+ROLES_RESTRINGIDOS = {"revisor", "centro_medico", "aprobador"}
+
+# Tabla de pasos válidos del flujo: rol del tenedor actual -> roles destino.
+# None = el caso está en Tesorería (Mónica).
+PASOS_FLUJO = {
+    None: {"revisor", "centro_medico"},
+    "centro_medico": {None},
+    "revisor": {"aprobador", None},
+    "aprobador": {"revisor"},
+}
 
 
 async def crear_caso_action(
@@ -97,8 +110,8 @@ async def crear_caso_action(
 
 async def listar_casos_action(db: AsyncSession, user: dict | None = None) -> list[Caso]:
     query = select(Caso).order_by(Caso.fecha_creacion.desc())
-    # El revisor solo ve los casos que Tesorería le remitió.
-    if user and user.get("rol") == "revisor":
+    # Quien opera en el flujo solo ve los casos que tiene asignados.
+    if user and user.get("rol") in ROLES_RESTRINGIDOS:
         query = query.where(Caso.revisor_asignado_id == user.get("id"))
     result = await db.execute(query)
     return list(result.scalars().all())
@@ -114,11 +127,11 @@ async def obtener_caso_por_numero_action(db: AsyncSession, numero: str) -> Caso 
     return result.scalar_one_or_none()
 
 
-def _es_revisor_sin_acceso(caso: Caso, user: dict | None) -> bool:
-    """True si quien consulta es revisor y el caso no le fue remitido."""
+def _restringido_sin_acceso(caso: Caso, user: dict | None) -> bool:
+    """True si quien consulta opera en el flujo y el caso no lo tiene asignado."""
     return bool(
         user
-        and user.get("rol") == "revisor"
+        and user.get("rol") in ROLES_RESTRINGIDOS
         and caso.revisor_asignado_id != user.get("id")
     )
 
@@ -128,10 +141,10 @@ async def exigir_acceso_caso_action(db: AsyncSession, caso_id: int, user: dict |
     caso = await obtener_caso_action(db, caso_id)
     if not caso:
         raise HTTPException(status_code=404, detail="Caso no encontrado")
-    if _es_revisor_sin_acceso(caso, user):
+    if _restringido_sin_acceso(caso, user):
         raise HTTPException(
             status_code=403,
-            detail="Este caso no te fue remitido. Solo puedes ver los casos asignados a ti.",
+            detail="Este caso no lo tienes asignado. Solo puedes ver los casos en tus manos.",
         )
     return caso
 
@@ -140,10 +153,10 @@ async def exigir_acceso_caso_por_numero_action(db: AsyncSession, numero: str, us
     caso = await obtener_caso_por_numero_action(db, numero)
     if not caso:
         raise HTTPException(status_code=404, detail="Caso no encontrado")
-    if _es_revisor_sin_acceso(caso, user):
+    if _restringido_sin_acceso(caso, user):
         raise HTTPException(
             status_code=403,
-            detail="Este caso no te fue remitido. Solo puedes ver los casos asignados a ti.",
+            detail="Este caso no lo tienes asignado. Solo puedes ver los casos en tus manos.",
         )
     return caso
 
@@ -152,24 +165,79 @@ async def remitir_caso_action(
     db: AsyncSession,
     caso_id: int,
     revisor_id: int | None,
-    cambiado_por: str,
+    motivo: str | None,
+    actor: dict,
 ) -> Caso | None:
-    """Asigna el caso a un revisor (o retira la remisión con None)."""
+    """Mueve el caso al siguiente paso del flujo (tenedor único).
+
+    `revisor_id` None = el caso vuelve a Tesorería (Mónica). Las devoluciones
+    (volver a Mónica o JG -> Robin) exigen motivo y quedan como comentario
+    interno además del historial.
+    """
     caso = await obtener_caso_action(db, caso_id)
     if not caso:
         return None
 
+    rol_actor = actor.get("rol")
+    # Quien opera en el flujo solo mueve los casos que tiene en sus manos.
+    if rol_actor in ROLES_RESTRINGIDOS and caso.revisor_asignado_id != actor.get("id"):
+        raise HTTPException(
+            status_code=403,
+            detail="Solo puedes remitir los casos que tienes en tus manos.",
+        )
+
     if revisor_id is None:
-        caso.revisor_asignado_id = None
-        descripcion = "Se retiró la remisión del caso a revisión"
+        rol_destino = None
+        destino_nombre = "Tesorería (Mónica)"
     else:
-        revisor = await db.get(Usuario, revisor_id)
-        if not revisor or revisor.rol != "revisor":
-            raise HTTPException(status_code=404, detail="Revisor no encontrado")
-        if revisor.activo is False:
-            raise HTTPException(status_code=400, detail="El revisor seleccionado está inactivo")
-        caso.revisor_asignado_id = revisor.id
-        descripcion = f"Caso remitido a {revisor.nombre} para revisión"
+        destino = await db.get(Usuario, revisor_id)
+        if not destino or destino.rol not in ROLES_RESTRINGIDOS:
+            raise HTTPException(status_code=404, detail="Destinatario no encontrado")
+        if destino.activo is False:
+            raise HTTPException(status_code=400, detail="El destinatario seleccionado está inactivo")
+        rol_destino = destino.rol
+        destino_nombre = destino.nombre
+        # No tiene sentido "remitir" al mismo tenedor.
+        if caso.revisor_asignado_id == destino.id:
+            raise HTTPException(status_code=409, detail=f"El caso ya está en manos de {destino.nombre}")
+
+    # Rol del tenedor actual (None = en Tesorería).
+    rol_tenedor = None
+    if caso.revisor_asignado_id is not None:
+        tenedor = await db.get(Usuario, caso.revisor_asignado_id)
+        rol_tenedor = tenedor.rol if tenedor else None
+
+    if rol_destino not in PASOS_FLUJO.get(rol_tenedor, set()):
+        raise HTTPException(
+            status_code=409,
+            detail="Ese paso no es válido en el flujo del caso.",
+        )
+
+    # JG solo devuelve a quien se lo envió: la cadena Mónica -> Robin -> JG ->
+    # Robin queda garantizada aunque haya varios revisores. Tesorería conserva
+    # override para casos borde (ej. remitente inactivo).
+    if rol_tenedor == "aprobador" and rol_destino == "revisor" and rol_actor == "aprobador":
+        if revisor_id != caso.remitido_por_id:
+            raise HTTPException(
+                status_code=409,
+                detail="Solo puedes devolver el caso a quien te lo envió para revisión.",
+            )
+
+    es_devolucion = rol_destino is None or (rol_tenedor == "aprobador" and rol_destino == "revisor")
+    motivo_limpio = (motivo or "").strip()
+    if es_devolucion and not motivo_limpio:
+        raise HTTPException(
+            status_code=400,
+            detail="Indica el motivo de la devolución: es obligatorio para devolver un caso.",
+        )
+
+    caso.remitido_por_id = caso.revisor_asignado_id
+    caso.revisor_asignado_id = revisor_id
+    descripcion = (
+        f"Caso devuelto a {destino_nombre}: {motivo_limpio}"
+        if es_devolucion
+        else f"Caso remitido a {destino_nombre} para revisión"
+    )
 
     estado_actual = caso.estado.value if hasattr(caso.estado, "value") else str(caso.estado)
     db.add(
@@ -177,10 +245,21 @@ async def remitir_caso_action(
             caso_id=caso_id,
             estado_anterior=estado_actual,
             estado_nuevo=estado_actual,
-            cambiado_por=cambiado_por,
+            cambiado_por=actor.get("nombre", "Tesorería"),
             descripcion=descripcion,
         )
     )
+
+    # El motivo de la devolución queda además como comentario interno.
+    if es_devolucion:
+        db.add(
+            Comentario(
+                caso_id=caso_id,
+                autor=actor.get("nombre", "Tesorería"),
+                texto=motivo_limpio,
+                visible_para_estudiante=False,
+            )
+        )
 
     await db.commit()
     await db.refresh(caso)
@@ -206,6 +285,30 @@ async def cambiar_estado_action(
         raise HTTPException(status_code=400, detail=f"Estado inválido: {nuevo_estado}")
 
     es_admin = rol == "admin"
+    es_aprobador = rol == "aprobador"
+    es_asistente = rol == "asistente_tesoreria"
+
+    # Revisor y Centro Médico no cambian estados: consultan y comentan.
+    if rol in ("revisor", "centro_medico"):
+        raise HTTPException(
+            status_code=403,
+            detail="Los revisores y el Centro Médico solo pueden consultar y comentar los casos.",
+        )
+
+    # El aprobador final solo registra la aprobación o el rechazo.
+    if es_aprobador and estado_valido not in (EstadoCaso.APROBADO, EstadoCaso.RECHAZADO):
+        raise HTTPException(
+            status_code=403,
+            detail="Como aprobador final solo puedes registrar la aprobación o el rechazo del caso.",
+        )
+
+    # La asistente no fija estados finales: la aprobación la registra JG.
+    if es_asistente and estado_valido in (EstadoCaso.APROBADO, EstadoCaso.RECHAZADO):
+        raise HTTPException(
+            status_code=403,
+            detail="La aprobación o el rechazo final los registra el aprobador (JG). Remite el caso para continuar el flujo.",
+        )
+
     if not es_admin:
         if caso.estado in (EstadoCaso.APROBADO, EstadoCaso.RECHAZADO):
             raise HTTPException(
@@ -257,11 +360,26 @@ async def actualizar_decision_action(
     caso_id: int,
     data: dict,
     cambiado_por: str,
+    rol: str = "asistente_tesoreria",
 ) -> Caso | None:
     """Actualiza nivel académico, porcentaje aplicado y/o destino de devolución."""
     caso = await obtener_caso_action(db, caso_id)
     if not caso:
         return None
+
+    if rol in ("revisor", "centro_medico"):
+        raise HTTPException(
+            status_code=403,
+            detail="Los revisores y el Centro Médico solo pueden consultar y comentar los casos.",
+        )
+
+    porcentaje = data.get("porcentaje_aplicado")
+    destino = data.get("destino_devolucion")
+    if rol == "asistente_tesoreria" and (porcentaje is not None or destino is not None):
+        raise HTTPException(
+            status_code=403,
+            detail="Los porcentajes y el destino los confirma el aprobador final (JG).",
+        )
 
     tipo = caso.tipo_solicitud
     nivel_casos = []
@@ -272,7 +390,6 @@ async def actualizar_decision_action(
         caso.nivel_academico = nivel
         nivel_casos.append(f"Nivel académico: {nivel}")
 
-    porcentaje = data.get("porcentaje_aplicado")
     if porcentaje is not None:
         permitidos = PORCENTAJES_POR_TIPO.get(tipo.value if hasattr(tipo, "value") else str(tipo), set())
         porcentaje_num = float(porcentaje)
@@ -285,7 +402,6 @@ async def actualizar_decision_action(
         caso.porcentaje_aplicado = porcentaje_num
         nivel_casos.append(f"Porcentaje aplicado: {porcentaje_num:g}%")
 
-    destino = data.get("destino_devolucion")
     if destino is not None:
         if tipo != TipoSolicitud.DEVOLUCION:
             raise HTTPException(

@@ -38,6 +38,9 @@ class Caso(Base):
     estado = Column(SAEnum(EstadoCaso), nullable=False, default=EstadoCaso.RECIBIDO)
     asistente_asignada_id = Column(Integer, ForeignKey("usuarios.id"), nullable=True)
     revisor_asignado_id = Column(Integer, ForeignKey("usuarios.id"), nullable=True)
+    # Quién tenía el caso antes del tenedor actual (None = estaba en Tesorería).
+    # Sirve para que JG solo pueda devolver a quien se lo envió.
+    remitido_por_id = Column(Integer, ForeignKey("usuarios.id"), nullable=True)
 
     # Datos del tercero (opcional)
     tercero_nombre = Column(String(200))

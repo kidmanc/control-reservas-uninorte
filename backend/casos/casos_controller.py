@@ -52,8 +52,9 @@ async def actualizar_decision_controller(
     caso_id: int,
     data: dict,
     cambiado_por: str,
+    rol: str = "asistente_tesoreria",
 ):
-    return await actualizar_decision_action(db, caso_id, data, cambiado_por)
+    return await actualizar_decision_action(db, caso_id, data, cambiado_por, rol)
 
 
 async def transicionar_automatica_controller(db: AsyncSession) -> int:
@@ -72,6 +73,7 @@ async def remitir_caso_controller(
     db: AsyncSession,
     caso_id: int,
     revisor_id: int | None,
-    cambiado_por: str,
+    motivo: str | None,
+    actor: dict,
 ):
-    return await remitir_caso_action(db, caso_id, revisor_id, cambiado_por)
+    return await remitir_caso_action(db, caso_id, revisor_id, motivo, actor)

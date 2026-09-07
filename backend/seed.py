@@ -51,13 +51,18 @@ async def seed():
                     nombre="Centro Médico",
                     correo="centro.medico@uninorte.edu.co",
                     contrasena_hash=hash_contrasena("password123"),
-                    rol="revisor",
+                    rol="centro_medico",
                     iniciales="CEM",
                     activo=True,
                 )
             )
             await db.commit()
-            print("Revisor semilla creado: centro.medico@uninorte.edu.co / password123")
+            print("Centro Médico semilla creado: centro.medico@uninorte.edu.co / password123")
+        elif centro.rol != "centro_medico":
+            # Transición: antes existía como revisor genérico.
+            centro.rol = "centro_medico"
+            await db.commit()
+            print("Centro Médico semilla actualizado al rol centro_medico")
 
     await engine.dispose()
 

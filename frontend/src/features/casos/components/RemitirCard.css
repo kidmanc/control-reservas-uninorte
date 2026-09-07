@@ -54,3 +54,22 @@
   opacity: 0.45;
   cursor: not-allowed;
 }
+
+.remit-motivo {
+  width: 100%;
+  min-height: 76px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--card);
+  font-size: 13px;
+  color: var(--negro);
+  font-family: var(--font-body);
+  line-height: 1.5;
+  resize: vertical;
+}
+
+.remit-motivo:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}

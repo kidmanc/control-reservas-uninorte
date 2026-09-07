@@ -1,7 +1,7 @@
 import { ESTADOS_ORDEN, ESTADO_LABEL, ESTADOS_FINALES, ESTADOS } from '../constants';
 import { IconCheck } from '../../../components/ui/icons';
 
-export default function StatusChanger({ estadoActual, onCambiar, cambiando, esAdmin = false }) {
+export default function StatusChanger({ estadoActual, onCambiar, cambiando, esAdmin = false, soloFinales = false }) {
   const casoEnEstadoFinal = ESTADOS_FINALES.includes(estadoActual);
   const esperaDocumentacion = estadoActual === ESTADOS.FALTA_DOCUMENTACION;
   const bloqueado = casoEnEstadoFinal || esperaDocumentacion;
@@ -25,20 +25,29 @@ export default function StatusChanger({ estadoActual, onCambiar, cambiando, esAd
         Cambiar estado
       </h3>
       <div className="status-select">
-        {ESTADOS_ORDEN.map((estado) => (
-          <button
-            key={estado}
-            type="button"
-            className={`status-option${estado === estadoActual ? ' selected' : ''}`}
-            disabled={cambiando || estado === estadoActual || !puedeCambiar}
-            onClick={() => onCambiar(estado)}
-            title={!puedeCambiar ? hint : undefined}
-          >
-            <span className="radio" />
-            {ESTADO_LABEL[estado]}
-          </button>
-        ))}
+        {ESTADOS_ORDEN.map((estado) => {
+          const esFinal = ESTADOS_FINALES.includes(estado);
+          const deshabilitado = cambiando || estado === estadoActual || !puedeCambiar || (soloFinales && !esFinal);
+          return (
+            <button
+              key={estado}
+              type="button"
+              className={`status-option${estado === estadoActual ? ' selected' : ''}`}
+              disabled={deshabilitado}
+              onClick={() => onCambiar(estado)}
+              title={!puedeCambiar ? hint : undefined}
+            >
+              <span className="radio" />
+              {ESTADO_LABEL[estado]}
+            </button>
+          );
+        })}
       </div>
+      {soloFinales && !casoEnEstadoFinal && (
+        <p className="empty-hint" style={{ marginTop: 10 }}>
+          Como aprobador final solo registras la aprobación o el rechazo del caso.
+        </p>
+      )}
       {hint && (
         <p className="empty-hint" style={{ marginTop: 10 }}>
           {hint}

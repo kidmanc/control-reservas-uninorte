@@ -12,8 +12,12 @@ const NAV_ITEMS = [
 const ROL_LABEL = {
   admin: 'Tesorero',
   asistente_tesoreria: 'Asistente de Tesorería',
-  revisor: 'Revisor',
+  revisor: 'Revisor de detalle',
+  centro_medico: 'Centro Médico',
+  aprobador: 'Aprobador final',
 };
+
+const ROLES_FLUJO = ['revisor', 'centro_medico', 'aprobador'];
 
 export default function PanelSidebar() {
   const { user, logout } = useAuth();
@@ -37,7 +41,7 @@ export default function PanelSidebar() {
       {NAV_ITEMS.filter(
         (item) =>
           (!item.adminOnly || user?.rol === 'admin') &&
-          (!item.staffOnly || user?.rol !== 'revisor'),
+          (!item.staffOnly || !ROLES_FLUJO.includes(user?.rol)),
       ).map((item) => (
         <NavLink
           key={item.to}

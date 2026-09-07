@@ -59,12 +59,12 @@ async def listar_casos(db: AsyncSession = Depends(get_db), user: dict = Depends(
     return casos
 
 
-def _bloquear_revisor_escritura(user: dict, accion: str):
-    """El revisor consulta y comenta; no cambia estados ni decisiones."""
-    if user.get("rol") == "revisor":
+def _bloquear_operador_escritura(user: dict, accion: str):
+    """Revisor y Centro Médico consultan y comentan; no cambian estados ni decisiones."""
+    if user.get("rol") in {"revisor", "centro_medico"}:
         raise HTTPException(
             status_code=403,
-            detail=f"Los revisores solo pueden consultar y comentar los casos. {accion} corresponde a Tesorería.",
+            detail=f"Los revisores y el Centro Médico solo pueden consultar y comentar los casos. {accion} no les corresponde.",
         )
 
 
@@ -88,7 +88,7 @@ async def obtener_caso_por_numero(
 
 @router.patch("/{caso_id}/estado", response_model=CasoResponse)
 async def cambiar_estado(caso_id: int, request: CambiarEstadoRequest, db: AsyncSession = Depends(get_db), user: dict = Depends(get_current_user)):
-    _bloquear_revisor_escritura(user, "Cambiar el estado")
+    _bloquear_operador_escritura(user, "Cambiar el estado")
     caso = await cambiar_estado_controller(
         db,
         caso_id,
@@ -110,12 +110,13 @@ async def actualizar_decision(
     user: dict = Depends(get_current_user),
 ):
     """Actualiza nivel académico, porcentaje aplicado y/o destino de la devolución."""
-    _bloquear_revisor_escritura(user, "Registrar la decisión")
+    _bloquear_operador_escritura(user, "Registrar la decisión")
     caso = await actualizar_decision_controller(
         db,
         caso_id,
         request.model_dump(exclude_none=True),
         cambiado_por=user["nombre"],
+        rol=user["rol"],
     )
     if not caso:
         raise HTTPException(status_code=404, detail="Caso no encontrado")
@@ -129,14 +130,18 @@ async def remitir_caso(
     db: AsyncSession = Depends(get_db),
     user: dict = Depends(get_current_user),
 ):
-    """Remite el caso a un revisor (solo Tesorería: asistente o admin)."""
-    if user.get("rol") not in {"admin", "asistente_tesoreria"}:
-        raise HTTPException(status_code=403, detail="Solo Tesorería puede remitir casos a un revisor")
+    """Mueve el caso al siguiente paso del flujo (tenedor único).
+
+    Tesorería (asistente o admin) opera cualquier paso válido; quien tiene el
+    caso en sus manos solo puede dar sus pasos permitidos. El backend impone
+    la tabla del flujo y exige motivo en las devoluciones.
+    """
     caso = await remitir_caso_controller(
         db,
         caso_id,
         request.revisor_id,
-        cambiado_por=user["nombre"],
+        request.motivo,
+        actor=user,
     )
     if not caso:
         raise HTTPException(status_code=404, detail="Caso no encontrado")

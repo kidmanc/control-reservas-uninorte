@@ -32,6 +32,7 @@ NUEVAS_COLUMNAS_CASOS = {
     "porcentaje_aplicado": "FLOAT",
     "destino_devolucion": "VARCHAR(50)",
     "revisor_asignado_id": "INTEGER",
+    "remitido_por_id": "INTEGER",
 }
 
 

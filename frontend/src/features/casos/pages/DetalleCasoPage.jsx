@@ -6,7 +6,7 @@ import TipoTag from '../../../components/ui/TipoTag';
 import { IconBack, IconUsers } from '../../../components/ui/icons';
 import { useAuth } from '../../auth/AuthContext';
 import { getCaso, cambiarEstado, agregarComentario, obtenerArchivo, actualizarCasoDecision, remitirCaso } from '../api/casosApi';
-import { listarRevisores } from '../../usuarios/api/usuariosApi';
+import { listarDestinatarios } from '../../usuarios/api/usuariosApi';
 import { NIVELES_ACADEMICOS, NIVEL_ACADEMICO_LABEL } from '../constants';
 import StatusChanger from '../components/StatusChanger';
 import RemitirCard from '../components/RemitirCard';
@@ -29,7 +29,7 @@ export default function DetalleCasoPage() {
   const [errorCarga, setErrorCarga] = useState(null);
   const [cambiandoEstado, setCambiandoEstado] = useState(false);
   const [guardandoDecision, setGuardandoDecision] = useState(false);
-  const [revisores, setRevisores] = useState([]);
+  const [destinatarios, setDestinatarios] = useState([]);
   const [remitiendo, setRemitiendo] = useState(false);
   const [enviandoComentario, setEnviandoComentario] = useState(false);
   const [archivoAbriendoId, setArchivoAbriendoId] = useState(null);
@@ -53,14 +53,13 @@ export default function DetalleCasoPage() {
     cargar();
   }, [cargar]);
 
-  const puedeRemitir = user?.rol === 'admin' || user?.rol === 'asistente_tesoreria';
-
+  // Quien ve el detalle (Tesorería o tenedor) necesita la lista de destinatarios
+  // para mostrar el tenedor actual y los pasos válidos del flujo.
   useEffect(() => {
-    if (!puedeRemitir) return;
-    listarRevisores()
-      .then(setRevisores)
-      .catch(() => setRevisores([]));
-  }, [puedeRemitir]);
+    listarDestinatarios()
+      .then(setDestinatarios)
+      .catch(() => setDestinatarios([]));
+  }, []);
 
   async function onCambiarEstado(nuevoEstado) {
     setCambiandoEstado(true);
@@ -88,14 +87,14 @@ export default function DetalleCasoPage() {
     }
   }
 
-  async function onRemitir(revisorId) {
+  async function onRemitir(revisorId, motivo) {
     setRemitiendo(true);
     setErrorAccion(null);
     try {
-      const actualizado = await remitirCaso(id, revisorId);
+      const actualizado = await remitirCaso(id, revisorId, motivo);
       setCaso(actualizado);
     } catch (err) {
-      setErrorAccion(err.message || 'No se pudo remitir el caso.');
+      setErrorAccion(err.message || 'No se pudo mover el caso.');
     } finally {
       setRemitiendo(false);
     }
@@ -175,7 +174,15 @@ export default function DetalleCasoPage() {
   }
 
   const esAdmin = user?.rol === 'admin';
-  const esRevisor = user?.rol === 'revisor';
+  const esAsistente = user?.rol === 'asistente_tesoreria';
+  const esAprobador = user?.rol === 'aprobador';
+  const sinEstadoNiDecision = user?.rol === 'revisor' || user?.rol === 'centro_medico';
+
+  const HINT_POR_ROL = {
+    revisor: 'Este caso está en tus manos para revisión de detalle. Revísalo y envíalo a aprobación final o devuélvelo a Mónica con el motivo.',
+    centro_medico: 'Este caso está en tus manos para validación médica. Revisa los soportes y devuélvelo a Mónica con tu visto bueno.',
+    aprobador: 'Este caso está en tus manos para aprobación final. Registra la decisión o devuélvelo a revisión de detalle con el motivo.',
+  };
 
   return (
     <div className="panel-layout">
@@ -279,29 +286,38 @@ export default function DetalleCasoPage() {
           </div>
 
           {/* Columna derecha */}
-          <div>
+            <div>
             {errorAccion && <div className="form-error" style={{ marginBottom: 16 }}>{errorAccion}</div>}
-            {esRevisor && (
+            {HINT_POR_ROL[user?.rol] && (
               <div className="sidebar-card">
                 <p className="empty-hint" style={{ marginBottom: 0 }}>
-                  Este caso te fue remitido para revisión. Puedes consultar los soportes y dejar tus comentarios;
-                  la decisión final corresponde a Tesorería.
+                  {HINT_POR_ROL[user?.rol]}
                 </p>
               </div>
             )}
-            {puedeRemitir && (
-              <RemitirCard caso={caso} revisores={revisores} onRemitir={onRemitir} remitiendo={remitiendo} />
-            )}
-            {!esRevisor && (
+            <RemitirCard
+              caso={caso}
+              destinatarios={destinatarios}
+              onRemitir={onRemitir}
+              remitiendo={remitiendo}
+              rolActor={user?.rol}
+            />
+            {!sinEstadoNiDecision && (
               <StatusChanger
                 estadoActual={caso.estado}
                 onCambiar={onCambiarEstado}
                 cambiando={cambiandoEstado}
                 esAdmin={esAdmin}
+                soloFinales={esAprobador}
               />
             )}
-            {!esRevisor && (
-              <DecisionCard caso={caso} onCambiar={onCambiarDecision} guardando={guardandoDecision} />
+            {!sinEstadoNiDecision && (
+              <DecisionCard
+                caso={caso}
+                onCambiar={onCambiarDecision}
+                guardando={guardandoDecision}
+                soloLectura={esAsistente}
+              />
             )}
             <FilesSidebar
               archivos={caso.archivos}
