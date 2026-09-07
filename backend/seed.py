@@ -64,6 +64,34 @@ async def seed():
             await db.commit()
             print("Centro Médico semilla actualizado al rol centro_medico")
 
+        # Cuentas del flujo (misma contraseña para todas: password123).
+        # Son datos de ejemplo para desarrollo: la tesorera los reemplaza
+        # con las cuentas reales desde Gestión de usuarios.
+        semillas_flujo = [
+            ("Mónica", "monica@uninorte.edu.co", "asistente_tesoreria", "M"),
+            ("Robin", "robin@uninorte.edu.co", "revisor", "R"),
+            ("JG", "jg@uninorte.edu.co", "aprobador", "JG"),
+        ]
+        for nombre, correo, rol, iniciales in semillas_flujo:
+            result = await db.execute(select(Usuario).where(Usuario.correo == correo))
+            existente = result.scalar_one_or_none()
+            if not existente:
+                db.add(
+                    Usuario(
+                        nombre=nombre,
+                        correo=correo,
+                        contrasena_hash=hash_contrasena("password123"),
+                        rol=rol,
+                        iniciales=iniciales,
+                        activo=True,
+                    )
+                )
+                print(f"Semilla creado: {correo} / password123 ({rol})")
+            elif existente.rol != rol:
+                existente.rol = rol
+                print(f"Semilla actualizado al rol {rol}: {correo}")
+        await db.commit()
+
     await engine.dispose()
 
 
