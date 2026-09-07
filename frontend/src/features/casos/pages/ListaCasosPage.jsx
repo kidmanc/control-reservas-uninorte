@@ -6,6 +6,7 @@ import TipoTag from '../../../components/ui/TipoTag';
 import { IconPlus, IconSearch, IconUsers } from '../../../components/ui/icons';
 import { useAuth } from '../../auth/AuthContext';
 import { listCasos, listCasosParticipados } from '../api/casosApi';
+import { listarDestinatarios } from '../../usuarios/api/usuariosApi';
 import { ESTADOS, ESTADOS_ORDEN, ESTADO_LABEL, TIPOS_SOLICITUD, TIPO_SOLICITUD_TAG_LABEL } from '../constants';
 import './ListaCasosPage.css';
 
@@ -29,16 +30,25 @@ export default function ListaCasosPage() {
   const [soloTerceros, setSoloTerceros] = useState(false);
   const [busqueda, setBusqueda] = useState('');
   const [participados, setParticipados] = useState([]);
+  const [destinatarios, setDestinatarios] = useState([]);
+
+  // Mapa id -> usuario para mostrar quién tiene cada caso (columna Asignado).
+  const mapaDestinatarios = useMemo(
+    () => Object.fromEntries(destinatarios.map((d) => [d.id, d])),
+    [destinatarios],
+  );
 
   useEffect(() => {
     let vigente = true;
     const principal = listCasos();
     const historial = esOperador ? listCasosParticipados() : Promise.resolve([]);
-    Promise.all([principal, historial])
-      .then(([data, hist]) => {
+    const usuarios = listarDestinatarios().catch(() => []);
+    Promise.all([principal, historial, usuarios])
+      .then(([data, hist, dirs]) => {
         if (vigente) {
           setCasos(data);
           setParticipados(hist);
+          setDestinatarios(dirs);
           setCargando(false);
         }
       })
@@ -176,16 +186,21 @@ export default function ListaCasosPage() {
 
           {!cargando &&
             casosFiltrados.map((caso) => (
-              <FilaCaso key={caso.id} caso={caso} onAbrir={(id) => navigate(`/panel/casos/${id}`)} />
+              <FilaCaso
+                key={caso.id}
+                caso={caso}
+                tenedor={mapaDestinatarios[caso.revisor_asignado_id]}
+                onAbrir={(id) => navigate(`/panel/casos/${id}`)}
+              />
             ))}
         </div>
 
         {esOperador && !cargando && !errorCarga && (
           <div className="historial-section">
-            <h2 className="historial-title">Historial — casos que ya revisaste ({participados.length})</h2>
+            <h2 className="historial-title">Historial: casos en los que participaste ({participados.length})</h2>
             <p className="empty-hint">Solo lectura: ya no están en tus manos, pero quedan en tu historial.</p>
             {participados.length === 0 ? (
-              <div className="empty-row">Todavía no has devuelto ningún caso.</div>
+              <div className="empty-row">Aún no tienes casos en tu historial. Aparecerán aquí los casos que pasen por tus manos.</div>
             ) : (
               <div className="case-table">
                 <div className="case-row header-row">
@@ -199,7 +214,12 @@ export default function ListaCasosPage() {
                   <span></span>
                 </div>
                 {participados.map((caso) => (
-                  <FilaCaso key={caso.id} caso={caso} onAbrir={(id) => navigate(`/panel/casos/${id}`)} />
+                  <FilaCaso
+                    key={caso.id}
+                    caso={caso}
+                    tenedor={mapaDestinatarios[caso.revisor_asignado_id]}
+                    onAbrir={(id) => navigate(`/panel/casos/${id}`)}
+                  />
                 ))}
               </div>
             )}
@@ -210,7 +230,7 @@ export default function ListaCasosPage() {
   );
 }
 
-function FilaCaso({ caso, onAbrir }) {
+function FilaCaso({ caso, tenedor, onAbrir }) {
   return (
     <button className="case-row" onClick={() => onAbrir(caso.id)}>
       <span className="case-code">{caso.id}</span>
@@ -222,11 +242,13 @@ function FilaCaso({ caso, onAbrir }) {
       <span className="case-meta-text">{caso.programa_academico}</span>
       <span className="case-meta-text">{caso.periodo_academico}</span>
       <EstadoBadge estado={caso.estado} />
-      {caso.asistente_asignada ? (
-        <div className="avatar-mini">{caso.asistente_asignada.iniciales}</div>
+      {tenedor ? (
+        <div className="avatar-mini" title={`${tenedor.nombre} tiene el caso`}>
+          {tenedor.iniciales}
+        </div>
       ) : (
-        <div className="avatar-mini" style={{ background: '#f0ece3', color: '#b3ada2' }}>
-          —
+        <div className="avatar-mini" title="En Tesorería (sin asignar)" style={{ background: '#e9e4d8', color: '#7a766c' }}>
+          T
         </div>
       )}
       {caso.tercero ? (
