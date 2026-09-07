@@ -1,7 +1,7 @@
 import { ESTADOS_ORDEN, ESTADO_LABEL, ESTADOS_FINALES, ESTADOS } from '../constants';
 import { IconCheck } from '../../../components/ui/icons';
 
-export default function StatusChanger({ estadoActual, onCambiar, cambiando, esAdmin = false, soloFinales = false, puedeAprobar = true }) {
+export default function StatusChanger({ estadoActual, onCambiar, cambiando, esAdmin = false, soloFinales = false, soloNoFinales = false, puedeAprobar = true }) {
   const casoEnEstadoFinal = ESTADOS_FINALES.includes(estadoActual);
   const esperaDocumentacion = estadoActual === ESTADOS.FALTA_DOCUMENTACION;
   const bloqueado = casoEnEstadoFinal || esperaDocumentacion;
@@ -31,12 +31,14 @@ export default function StatusChanger({ estadoActual, onCambiar, cambiando, esAd
         {opciones.map((estado) => {
           const esFinal = ESTADOS_FINALES.includes(estado);
           const esAprobado = estado === ESTADOS.APROBADO;
-          const deshabilitado =
-            cambiando ||
-            estado === estadoActual ||
-            !puedeCambiar ||
-            (soloFinales && !esFinal) ||
-            (esAprobado && !puedeAprobar);
+          const esRecibido = estado === ESTADOS.RECIBIDO;
+          let motivoBloqueo = null;
+          if (!puedeCambiar) motivoBloqueo = hint;
+          else if (soloFinales && !esFinal) motivoBloqueo = 'Como aprobador final solo registras la aprobación o el rechazo.';
+          else if (soloNoFinales && esFinal) motivoBloqueo = 'Solo el aprobador final registra la aprobación o el rechazo.';
+          else if (esRecibido && estadoActual !== ESTADOS.RECIBIDO) motivoBloqueo = 'Recibido es el estado inicial: no se puede volver a él.';
+          else if (esAprobado && !puedeAprobar) motivoBloqueo = 'Fija el porcentaje (y el destino si es devolución) en la decisión antes de aprobar.';
+          const deshabilitado = cambiando || estado === estadoActual || motivoBloqueo !== null;
           return (
             <button
               key={estado}
@@ -44,7 +46,7 @@ export default function StatusChanger({ estadoActual, onCambiar, cambiando, esAd
               className={`status-option${estado === estadoActual ? ' selected' : ''}`}
               disabled={deshabilitado}
               onClick={() => onCambiar(estado)}
-              title={!puedeCambiar ? hint : esAprobado && !puedeAprobar ? 'Fija el porcentaje (y el destino si es devolución) en la decisión antes de aprobar.' : undefined}
+              title={motivoBloqueo || undefined}
             >
               <span className="radio" />
               {ESTADO_LABEL[estado]}

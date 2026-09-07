@@ -10,7 +10,7 @@ async function request(url, options = {}) {
 
   let res;
   try {
-    res = await fetch(`${API}${url}`, { ...options, headers });
+    res = await fetch(`${API}${url}`, { cache: 'no-store', ...options, headers });
   } catch {
     throw new Error('No se pudo conectar con el servidor. Verifica que el backend esté corriendo (puerto 8000).');
   }

@@ -33,14 +33,15 @@ async def subir_archivo_action(db: AsyncSession, caso_id: int, data: dict) -> Ar
     )
     db.add(archivo)
 
-    # Al recibir la documentación solicitada, el caso vuelve a revisión automáticamente.
+    # Al recibir la documentación solicitada, el caso vuelve a recibido y el
+    # proceso automático lo pasa a revisión a las 24 horas.
     if caso.estado == EstadoCaso.FALTA_DOCUMENTACION:
-        caso.estado = EstadoCaso.EN_REVISION
+        caso.estado = EstadoCaso.RECIBIDO
         db.add(
             HistorialEstado(
                 caso_id=caso_id,
                 estado_anterior=EstadoCaso.FALTA_DOCUMENTACION.value,
-                estado_nuevo=EstadoCaso.EN_REVISION.value,
+                estado_nuevo=EstadoCaso.RECIBIDO.value,
                 cambiado_por="sistema",
                 descripcion="El estudiante adjuntó la documentación solicitada",
             )

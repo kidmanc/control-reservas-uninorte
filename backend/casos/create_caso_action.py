@@ -1,4 +1,4 @@
-from sqlalchemy import select, func
+from sqlalchemy import select, func, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi import HTTPException
 
@@ -193,13 +193,18 @@ async def exigir_tenedor_caso_action(db: AsyncSession, caso_id: int, user: dict 
 
 
 async def listar_participados_action(db: AsyncSession, user: dict) -> list[Caso]:
-    """Historial del operador: casos que tuvo en sus manos y ya no tiene."""
+    """Historial del operador: casos que tuvo en sus manos y ya no tiene.
+
+    El OR con IS NULL es obligatorio: en SQL `NULL != id` evalúa a NULL (no
+    a verdadero), y sin él los casos devueltos a Tesorería jamás aparecerían.
+    """
+    uid = user.get("id")
     result = await db.execute(
         select(Caso)
         .join(ParticipacionCaso, ParticipacionCaso.caso_id == Caso.id)
         .where(
-            ParticipacionCaso.usuario_id == user.get("id"),
-            Caso.revisor_asignado_id != user.get("id"),
+            ParticipacionCaso.usuario_id == uid,
+            or_(Caso.revisor_asignado_id != uid, Caso.revisor_asignado_id.is_(None)),
         )
         .order_by(ParticipacionCaso.fecha.desc())
     )
@@ -310,7 +315,8 @@ async def remitir_caso_action(
                 status_code=400,
                 detail="Indica el resultado de la revisión: es obligatorio al devolver un caso.",
             )
-        if not motivo_limpio:
+        # El visto bueno no exige comentario; todo rechazo o corrección sí.
+        if veredicto_limpio != "documentos_validos" and not motivo_limpio:
             raise HTTPException(
                 status_code=400,
                 detail="Indica el motivo de la devolución: es obligatorio para devolver un caso.",
@@ -319,11 +325,12 @@ async def remitir_caso_action(
 
     caso.remitido_por_id = caso.revisor_asignado_id
     caso.revisor_asignado_id = revisor_id
-    descripcion = (
-        f"Caso devuelto a {destino_nombre} — {etiqueta_veredicto}: {motivo_limpio}"
-        if es_devolucion
-        else f"Caso remitido a {destino_nombre} para revisión"
-    )
+    if es_devolucion:
+        descripcion = f"Caso devuelto a {destino_nombre} — {etiqueta_veredicto}"
+        if motivo_limpio:
+            descripcion += f": {motivo_limpio}"
+    else:
+        descripcion = f"Caso remitido a {destino_nombre} para revisión"
 
     estado_actual = caso.estado.value if hasattr(caso.estado, "value") else str(caso.estado)
     db.add(
@@ -342,7 +349,7 @@ async def remitir_caso_action(
             Comentario(
                 caso_id=caso_id,
                 autor=actor.get("nombre", "Tesorería"),
-                texto=f"{etiqueta_veredicto}: {motivo_limpio}",
+                texto=f"{etiqueta_veredicto}: {motivo_limpio}" if motivo_limpio else etiqueta_veredicto,
                 visible_para_estudiante=False,
             )
         )
@@ -383,6 +390,20 @@ async def cambiar_estado_action(
         estado_valido = EstadoCaso(nuevo_estado)
     except ValueError:
         raise HTTPException(status_code=400, detail=f"Estado inválido: {nuevo_estado}")
+
+    # Recibido es el estado inicial: una vez que se sale de él no se vuelve.
+    if estado_valido == EstadoCaso.RECIBIDO and caso.estado != EstadoCaso.RECIBIDO:
+        raise HTTPException(
+            status_code=409,
+            detail="Recibido es el estado inicial del caso: no se puede volver a él.",
+        )
+
+    # Solo Tesorería pide documentación al estudiante.
+    if estado_valido == EstadoCaso.FALTA_DOCUMENTACION and rol not in ("admin", "asistente_tesoreria"):
+        raise HTTPException(
+            status_code=403,
+            detail="Solo Tesorería puede solicitar documentación al estudiante.",
+        )
 
     # Quien opera en el flujo solo actúa sobre sus casos en mano.
     if rol in ROLES_RESTRINGIDOS and actor_id is not None and caso.revisor_asignado_id != actor_id:

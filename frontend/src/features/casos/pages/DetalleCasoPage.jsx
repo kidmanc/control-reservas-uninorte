@@ -333,6 +333,7 @@ export default function DetalleCasoPage() {
                 cambiando={cambiandoEstado}
                 esAdmin={esAdmin}
                 soloFinales={esAprobador}
+                soloNoFinales={esAsistente}
                 puedeAprobar={puedeAprobar}
               />
             )}

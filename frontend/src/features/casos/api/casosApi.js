@@ -22,7 +22,8 @@ async function request(url, options = {}) {
 
   let res;
   try {
-    res = await fetch(`${API}${url}`, { ...options, headers });
+    // no-store: la bandeja debe reflejar cada movimiento al instante.
+    res = await fetch(`${API}${url}`, { cache: 'no-store', ...options, headers });
   } catch {
     throw new Error('No se pudo conectar con el servidor. Verifica que el backend esté corriendo (puerto 8000).');
   }
@@ -133,7 +134,7 @@ export async function obtenerArchivo(casoId, archivoId) {
   const headers = token ? { Authorization: `Bearer ${token}` } : {};
   let res;
   try {
-    res = await fetch(`${API}/casos/${casoId}/archivos/${archivoId}/descargar`, { headers });
+    res = await fetch(`${API}/casos/${casoId}/archivos/${archivoId}/descargar`, { cache: 'no-store', headers });
   } catch {
     throw new Error('No se pudo conectar con el servidor.');
   }

@@ -21,32 +21,35 @@ const ESPERA_POR_ROL = {
 function pasosValidos(tenedor, destinatarios, caso) {
   const rolTenedor = tenedor?.rol || null;
 
-  // En Tesorería: al Centro Médico o a revisión de detalle.
+  // En Tesorería: al Centro Médico o a revisión de detalle (solo nombres).
   if (rolTenedor === null) {
     return destinatarios
       .filter((d) => d.rol === 'revisor' || d.rol === 'centro_medico')
       .map((d) => ({
         revisor_id: d.id,
-        etiqueta: `${d.nombre} — ${ROL_LABEL[d.rol] || d.rol}`,
+        etiqueta: d.nombre,
         esDevolucion: false,
         veredicto: null,
+        requiereMotivo: false,
       }));
   }
 
-  // Centro Médico: devuelve con su veredicto (válidos o no válidos).
+  // Centro Médico: aprueba o rechaza los documentos (solo rechazar pide motivo).
   if (rolTenedor === 'centro_medico') {
     return [
       {
         revisor_id: null,
-        etiqueta: 'Visto bueno: documentos válidos — devolver',
+        etiqueta: 'Aprobar',
         esDevolucion: true,
         veredicto: 'documentos_validos',
+        requiereMotivo: false,
       },
       {
         revisor_id: null,
-        etiqueta: 'No validados: documentos inválidos — devolver',
+        etiqueta: 'Rechazar',
         esDevolucion: true,
         veredicto: 'documentos_no_validos',
+        requiereMotivo: true,
       },
     ];
   }
@@ -57,9 +60,10 @@ function pasosValidos(tenedor, destinatarios, caso) {
       .filter((d) => d.rol === 'aprobador')
       .map((d) => ({
         revisor_id: d.id,
-        etiqueta: `Enviar a aprobación final (${d.nombre})`,
+        etiqueta: d.nombre,
         esDevolucion: false,
         veredicto: null,
+        requiereMotivo: false,
       }));
     return [
       ...adelantes,
@@ -68,6 +72,7 @@ function pasosValidos(tenedor, destinatarios, caso) {
         etiqueta: 'Devolver con correcciones',
         esDevolucion: true,
         veredicto: 'con_correcciones',
+        requiereMotivo: true,
       },
     ];
   }
@@ -80,9 +85,10 @@ function pasosValidos(tenedor, destinatarios, caso) {
       return [
         {
           revisor_id: remitente.id,
-          etiqueta: `Devolver con correcciones a ${remitente.nombre} (quien te lo envió)`,
+          etiqueta: `Devolver con correcciones a ${remitente.nombre}`,
           esDevolucion: true,
           veredicto: 'con_correcciones',
+          requiereMotivo: true,
         },
       ];
     }
@@ -93,6 +99,7 @@ function pasosValidos(tenedor, destinatarios, caso) {
         etiqueta: `Devolver con correcciones a ${d.nombre}`,
         esDevolucion: true,
         veredicto: 'con_correcciones',
+        requiereMotivo: true,
       }));
   }
 
@@ -117,11 +124,11 @@ export default function RemitirCard({ caso, destinatarios, onRemitir, remitiendo
   const tenedor = destinatarios.find((d) => d.id === caso.revisor_asignado_id) || null;
   const pasos = pasosValidos(tenedor, destinatarios, caso);
   const paso = indice === '' ? null : pasos[Number(indice)];
-  const faltaMotivo = paso?.esDevolucion && !motivo.trim();
+  const faltaMotivo = Boolean(paso && paso.requiereMotivo && !motivo.trim());
 
   function onConfirmar() {
     if (!paso || faltaMotivo) return;
-    onRemitir(paso.revisor_id, paso.esDevolucion ? motivo.trim() : null, paso.veredicto);
+    onRemitir(paso.revisor_id, paso.requiereMotivo ? motivo.trim() : null, paso.veredicto);
     setIndice('');
     setMotivo('');
   }
@@ -139,9 +146,9 @@ export default function RemitirCard({ caso, destinatarios, onRemitir, remitiendo
     return (
       <>
         <div className="remit-field">
-          <label>Siguiente paso</label>
+          <label>{tenedor?.rol === 'centro_medico' ? 'Decisión' : 'Remitir a'}</label>
           <select value={indice} disabled={remitiendo} onChange={(e) => setIndice(e.target.value)}>
-            <option value="">Selecciona el siguiente paso</option>
+            <option value="">Selecciona una opción</option>
             {pasos.map((p, i) => (
               <option key={`${p.revisor_id}-${p.veredicto}-${i}`} value={i}>
                 {p.etiqueta}
@@ -150,7 +157,7 @@ export default function RemitirCard({ caso, destinatarios, onRemitir, remitiendo
           </select>
         </div>
 
-        {paso?.esDevolucion && (
+        {paso?.requiereMotivo && (
           <div className="remit-field">
             <label>Motivo de la devolución</label>
             <textarea

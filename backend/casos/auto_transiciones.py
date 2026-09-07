@@ -9,10 +9,12 @@ from historial.historial_model import HistorialEstado
 
 
 async def transicionar_automatica_action(db: AsyncSession, ahora: datetime | None = None) -> int:
-    """Mueve de `recibido` a `en_revision` los casos con más de 24 horas sin revisión.
+    """Mueve de `recibido` a `en_revision` los casos con más de 24 horas sin movimiento.
 
-    Solo aplica a casos que siguen en `recibido`; los que están en
-    `falta_documentacion` o en estados finales se respetan.
+    Se mira la última actualización (no la creación): así, cuando el estudiante
+    adjunta documentos y el caso vuelve a `recibido`, Tesorería tiene 24 horas
+    frescas para retomarlo. Solo aplica a casos que siguen en `recibido`; los
+    que están en `falta_documentacion` o en estados finales se respetan.
     """
     momento = ahora or datetime.utcnow()
     corte = momento - timedelta(hours=settings.HORAS_CAMBIO_AUTOMATICO)
@@ -20,7 +22,7 @@ async def transicionar_automatica_action(db: AsyncSession, ahora: datetime | Non
     result = await db.execute(
         select(Caso).where(
             Caso.estado == EstadoCaso.RECIBIDO,
-            Caso.fecha_creacion <= corte,
+            Caso.fecha_ultima_actualizacion <= corte,
         )
     )
     candidatos = list(result.scalars().all())
