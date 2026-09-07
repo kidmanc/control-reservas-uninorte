@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import PanelSidebar from '../../../components/layout/PanelSidebar';
 import { IconUserAdd, IconCheckCircle, IconUsers } from '../../../components/ui/icons';
 import { listarUsuarios, crearUsuario, actualizarUsuario } from '../api/usuariosApi';
+import { useAuth } from '../../auth/AuthContext';
 import './UsuariosPage.css';
 
 const ESTADO_INICIAL = {
@@ -18,6 +19,7 @@ const ROLES = {
 };
 
 export default function UsuariosPage() {
+  const { user } = useAuth();
   const [form, setForm] = useState(ESTADO_INICIAL);
   const [usuarios, setUsuarios] = useState([]);
   const [cargando, setCargando] = useState(true);
@@ -200,21 +202,27 @@ export default function UsuariosPage() {
 
                 {usuarios.length === 0 && <div className="empty-row">Todavía no hay usuarios creados.</div>}
 
-                {usuarios.map((u) => (
+                {usuarios.map((u) => {
+                  const esSelf = u.id === user?.id;
+                  return (
                   <div className="usuario-row" key={u.id}>
                     <div className="usuario-nombre">
                       <div className="avatar-mini">{u.iniciales}</div>
                       <div>
-                        <div className="tag-name">{u.nombre}</div>
+                        <div className="tag-name">
+                          {u.nombre}
+                          {esSelf && <span className="tag-self" title="No puedes modificar tu propio rol ni desactivarte">Eres tú</span>}
+                        </div>
                         <div className="tag-sub">#{u.id}</div>
                       </div>
                     </div>
                     <span className="tag-meta">{u.correo}</span>
                     <select
                       value={u.rol}
-                      disabled={guardandoId === u.id}
+                      disabled={esSelf || guardandoId === u.id}
                       onChange={(e) => onGuardarCambios(u, 'rol', e.target.value)}
                       className="rol-select"
+                      title={esSelf ? 'No puedes modificar tu propio rol' : undefined}
                     >
                       {Object.entries(ROLES).map(([valor, etiqueta]) => (
                         <option key={valor} value={valor}>{etiqueta}</option>
@@ -222,13 +230,15 @@ export default function UsuariosPage() {
                     </select>
                     <button
                       className={`toggle-btn${u.activo ? '' : ' off'}`}
-                      disabled={guardandoId === u.id}
+                      disabled={esSelf || guardandoId === u.id}
                       onClick={() => onGuardarCambios(u, 'activo', !u.activo)}
+                      title={esSelf ? 'No puedes desactivar tu propia cuenta' : undefined}
                     >
                       {u.activo ? 'Activo' : 'Inactivo'}
                     </button>
                   </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </section>

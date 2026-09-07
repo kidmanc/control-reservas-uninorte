@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, Enum as SAEnum
+from sqlalchemy import Column, Integer, String, Text, DateTime, Float, ForeignKey, Enum as SAEnum
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 import enum
@@ -30,8 +30,11 @@ class Caso(Base):
     telefono_contacto = Column(String(50))
     programa_academico = Column(String(200), nullable=False)
     tipo_solicitud = Column(SAEnum(TipoSolicitud), nullable=False)
+    nivel_academico = Column(String(50), nullable=False, default="pregrado")
     periodo_academico = Column(String(20), nullable=False)
     motivo = Column(Text, nullable=False)
+    porcentaje_aplicado = Column(Float, nullable=True)
+    destino_devolucion = Column(String(50), nullable=True)
     estado = Column(SAEnum(EstadoCaso), nullable=False, default=EstadoCaso.RECIBIDO)
     asistente_asignada_id = Column(Integer, ForeignKey("usuarios.id"), nullable=True)
 

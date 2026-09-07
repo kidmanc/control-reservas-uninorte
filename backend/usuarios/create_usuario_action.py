@@ -1,4 +1,4 @@
-from sqlalchemy import select
+from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi import HTTPException
 
@@ -39,18 +39,47 @@ async def crear_usuario_action(db: AsyncSession, data: dict) -> Usuario:
     return usuario
 
 
-async def actualizar_usuario_action(db: AsyncSession, usuario_id: int, data: dict) -> Usuario | None:
+async def actualizar_usuario_action(db: AsyncSession, usuario_id: int, data: dict, actor_id: int | None = None) -> Usuario | None:
     usuario = await db.get(Usuario, usuario_id)
     if not usuario:
         return None
 
-    if data.get("rol") is not None:
-        if data["rol"] not in ROLES_PERMITIDOS:
-            raise HTTPException(status_code=400, detail=f"Rol inválido: {data['rol']}")
-        usuario.rol = data["rol"]
+    rol_nuevo = data.get("rol")
+    activo_nuevo = data.get("activo")
 
-    if data.get("activo") is not None:
-        usuario.activo = data["activo"]
+    # ¿Esta operación desactiva o degrada a un tesorero (admin)?
+    quita_admin = (
+        usuario.rol == "admin"
+        and (activo_nuevo is False or (rol_nuevo is not None and rol_nuevo != "admin"))
+    )
+    if quita_admin:
+        # Nadie puede desactivarse o degradarse a sí mismo.
+        if actor_id is not None and usuario.id == actor_id:
+            raise HTTPException(
+                status_code=400,
+                detail="No puedes desactivar tu propia cuenta ni quitarte el rol de tesorero.",
+            )
+        # Debe quedar al menos un admin activo.
+        resultado = await db.execute(
+            select(func.count(Usuario.id)).where(
+                Usuario.rol == "admin",
+                Usuario.activo.is_(True),
+            )
+        )
+        total_admins_activos = resultado.scalar() or 0
+        if total_admins_activos <= 1:
+            raise HTTPException(
+                status_code=400,
+                detail="No puedes dejar la tesorería sin un administrador activo.",
+            )
+
+    if rol_nuevo is not None:
+        if rol_nuevo not in ROLES_PERMITIDOS:
+            raise HTTPException(status_code=400, detail=f"Rol inválido: {rol_nuevo}")
+        usuario.rol = rol_nuevo
+
+    if activo_nuevo is not None:
+        usuario.activo = activo_nuevo
 
     await db.commit()
     await db.refresh(usuario)

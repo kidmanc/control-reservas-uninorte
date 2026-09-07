@@ -15,5 +15,5 @@ async def crear_usuario_controller(db: AsyncSession, data: dict):
     return await crear_usuario_action(db, data)
 
 
-async def actualizar_usuario_controller(db: AsyncSession, usuario_id: int, data: dict):
-    return await actualizar_usuario_action(db, usuario_id, data)
+async def actualizar_usuario_controller(db: AsyncSession, usuario_id: int, data: dict, actor_id: int | None = None):
+    return await actualizar_usuario_action(db, usuario_id, data, actor_id)

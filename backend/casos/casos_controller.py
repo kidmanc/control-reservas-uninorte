@@ -6,7 +6,9 @@ from casos.create_caso_action import (
     obtener_caso_action,
     obtener_caso_por_numero_action,
     cambiar_estado_action,
+    actualizar_decision_action,
 )
+from casos.auto_transiciones import transicionar_automatica_action
 
 
 async def crear_caso_controller(
@@ -37,5 +39,19 @@ async def cambiar_estado_controller(
     nuevo_estado: str,
     cambiado_por: str,
     descripcion: str | None = None,
+    rol: str = "asistente_tesoreria",
 ):
-    return await cambiar_estado_action(db, caso_id, nuevo_estado, cambiado_por, descripcion)
+    return await cambiar_estado_action(db, caso_id, nuevo_estado, cambiado_por, descripcion, rol)
+
+
+async def actualizar_decision_controller(
+    db: AsyncSession,
+    caso_id: int,
+    data: dict,
+    cambiado_por: str,
+):
+    return await actualizar_decision_action(db, caso_id, data, cambiado_por)
+
+
+async def transicionar_automatica_controller(db: AsyncSession) -> int:
+    return await transicionar_automatica_action(db)

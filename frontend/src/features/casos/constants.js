@@ -66,3 +66,42 @@ export const PARENTESCOS = [
   'Apoderado legal',
   'Otro familiar o allegado',
 ];
+
+// Nivel académico del estudiante.
+export const NIVELES_ACADEMICOS = {
+  PREGRADO: 'pregrado',
+  POSGRADO: 'posgrado',
+};
+
+export const NIVEL_ACADEMICO_LABEL = {
+  [NIVELES_ACADEMICOS.PREGRADO]: 'Pregrado',
+  [NIVELES_ACADEMICOS.POSGRADO]: 'Posgrado',
+};
+
+// Porcentajes de decisión que Tesorería puede aplicar, según el tipo de solicitud.
+// "0" representa la decisión de no aplicar (rechazo del beneficio).
+export const PORCENTAJES_POR_TIPO = {
+  [TIPOS_SOLICITUD.RESERVA_MATRICULA]: [
+    { valor: 85, etiqueta: '85%' },
+    { valor: 75, etiqueta: '75%' },
+    { valor: 100, etiqueta: '100%' },
+    { valor: 0, etiqueta: '0% (rechazado)' },
+  ],
+  [TIPOS_SOLICITUD.DEVOLUCION]: [
+    { valor: 100, etiqueta: '100%' },
+    { valor: 50, etiqueta: '50%' },
+    { valor: 40, etiqueta: '40%' },
+    { valor: 0, etiqueta: '0% (rechazado)' },
+  ],
+};
+
+// Destinos posibles de una devolución una vez aprobada.
+export const DESTINOS_DEVOLUCION = {
+  ESTUDIANTE: 'estudiante',
+  ICETEX: 'icetex',
+};
+
+export const DESTINO_DEVOLUCION_LABEL = {
+  [DESTINOS_DEVOLUCION.ESTUDIANTE]: 'Al estudiante',
+  [DESTINOS_DEVOLUCION.ICETEX]: 'Al ICETEX',
+};

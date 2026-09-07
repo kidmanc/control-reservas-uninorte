@@ -38,7 +38,12 @@ async def actualizar_usuario(
     user: dict = Depends(get_current_user),
 ):
     _exigir_admin(user)
-    resultado = await actualizar_usuario_controller(db, usuario_id, request.model_dump(exclude_none=True))
+    resultado = await actualizar_usuario_controller(
+        db,
+        usuario_id,
+        request.model_dump(exclude_none=True),
+        actor_id=user["id"],
+    )
     if not resultado:
         raise HTTPException(status_code=404, detail="Usuario no encontrado")
     return resultado

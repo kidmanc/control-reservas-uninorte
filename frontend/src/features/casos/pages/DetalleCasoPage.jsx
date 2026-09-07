@@ -5,11 +5,13 @@ import EstadoBadge from '../../../components/ui/EstadoBadge';
 import TipoTag from '../../../components/ui/TipoTag';
 import { IconBack, IconUsers } from '../../../components/ui/icons';
 import { useAuth } from '../../auth/AuthContext';
-import { getCaso, cambiarEstado, agregarComentario, obtenerArchivo } from '../api/casosApi';
+import { getCaso, cambiarEstado, agregarComentario, obtenerArchivo, actualizarCasoDecision } from '../api/casosApi';
+import { NIVELES_ACADEMICOS, NIVEL_ACADEMICO_LABEL } from '../constants';
 import StatusChanger from '../components/StatusChanger';
 import FilesSidebar from '../components/FilesSidebar';
 import CommentComposer from '../components/CommentComposer';
 import DetalleTabs from '../components/DetalleTabs';
+import DecisionCard from '../components/DecisionCard';
 import './DetalleCasoPage.css';
 
 function formatFecha(iso) {
@@ -24,6 +26,7 @@ export default function DetalleCasoPage() {
   const [cargando, setCargando] = useState(true);
   const [errorCarga, setErrorCarga] = useState(null);
   const [cambiandoEstado, setCambiandoEstado] = useState(false);
+  const [guardandoDecision, setGuardandoDecision] = useState(false);
   const [enviandoComentario, setEnviandoComentario] = useState(false);
   const [archivoAbriendoId, setArchivoAbriendoId] = useState(null);
   const [errorAccion, setErrorAccion] = useState(null);
@@ -56,6 +59,19 @@ export default function DetalleCasoPage() {
       setErrorAccion(err.message || 'No se pudo cambiar el estado.');
     } finally {
       setCambiandoEstado(false);
+    }
+  }
+
+  async function onCambiarDecision(cambios) {
+    setGuardandoDecision(true);
+    setErrorAccion(null);
+    try {
+      const actualizado = await actualizarCasoDecision(id, cambios);
+      setCaso(actualizado);
+    } catch (err) {
+      setErrorAccion(err.message || 'No se pudo guardar la decisión.');
+    } finally {
+      setGuardandoDecision(false);
     }
   }
 
@@ -132,6 +148,8 @@ export default function DetalleCasoPage() {
     );
   }
 
+  const esAdmin = user?.rol === 'admin';
+
   return (
     <div className="panel-layout">
       <PanelSidebar />
@@ -197,6 +215,20 @@ export default function DetalleCasoPage() {
                   <div className="value">{caso.telefono_contacto}</div>
                 </div>
                 <div className="info-item">
+                  <div className="label">Nivel académico</div>
+                  <select
+                    className="detalle-select"
+                    value={caso.nivel_academico || NIVELES_ACADEMICOS.PREGRADO}
+                    onChange={(e) => onCambiarDecision({ nivel_academico: e.target.value })}
+                  >
+                    {Object.values(NIVELES_ACADEMICOS).map((n) => (
+                      <option key={n} value={n}>
+                        {NIVEL_ACADEMICO_LABEL[n]}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="info-item">
                   <div className="label">Programa académico</div>
                   <div className="value">{caso.programa_academico}</div>
                 </div>
@@ -222,7 +254,13 @@ export default function DetalleCasoPage() {
           {/* Columna derecha */}
           <div>
             {errorAccion && <div className="form-error" style={{ marginBottom: 16 }}>{errorAccion}</div>}
-            <StatusChanger estadoActual={caso.estado} onCambiar={onCambiarEstado} cambiando={cambiandoEstado} />
+            <StatusChanger
+              estadoActual={caso.estado}
+              onCambiar={onCambiarEstado}
+              cambiando={cambiandoEstado}
+              esAdmin={esAdmin}
+            />
+            <DecisionCard caso={caso} onCambiar={onCambiarDecision} guardando={guardandoDecision} />
             <FilesSidebar
               archivos={caso.archivos}
               onVerArchivo={onVerArchivo}

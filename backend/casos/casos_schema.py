@@ -17,6 +17,7 @@ class CasoBase(BaseModel):
     telefono_contacto: str | None = None
     programa_academico: str
     tipo_solicitud: str
+    nivel_academico: str | None = "pregrado"
     periodo_academico: str
     motivo: str
 
@@ -44,6 +45,8 @@ class CasoResponse(CasoBase):
     numero_caso: str
     estado: str
     asistente_asignada_id: int | None = None
+    porcentaje_aplicado: float | None = None
+    destino_devolucion: str | None = None
     tercero_nombre: str | None = None
     tercero_parentesco: str | None = None
     tercero_documento: str | None = None
@@ -65,3 +68,31 @@ class CasoDetalle(CasoResponse):
 class CambiarEstadoRequest(BaseModel):
     nuevo_estado: str
     descripcion: str | None = None
+
+    @field_validator("nuevo_estado")
+    @classmethod
+    def validar_estado(cls, valor: str) -> str:
+        # Estados válidos según el enum EstadoCaso.
+        if valor not in {"recibido", "en_revision", "falta_documentacion", "aprobado", "rechazado"}:
+            raise ValueError(f"Estado inválido: {valor}")
+        return valor
+
+
+class ActualizarDecisionRequest(BaseModel):
+    nivel_academico: str | None = None
+    porcentaje_aplicado: float | None = None
+    destino_devolucion: str | None = None
+
+    @field_validator("nivel_academico")
+    @classmethod
+    def validar_nivel(cls, valor: str | None) -> str | None:
+        if valor is not None and valor not in {"pregrado", "posgrado"}:
+            raise ValueError("El nivel académico debe ser 'pregrado' o 'posgrado'")
+        return valor
+
+    @field_validator("destino_devolucion")
+    @classmethod
+    def validar_destino(cls, valor: str | None) -> str | None:
+        if valor is not None and valor not in {"estudiante", "icetex"}:
+            raise ValueError("El destino de la devolución debe ser 'estudiante' o 'icetex'")
+        return valor

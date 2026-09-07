@@ -1,8 +1,22 @@
-import { ESTADOS_ORDEN, ESTADO_LABEL, ESTADOS_FINALES } from '../constants';
+import { ESTADOS_ORDEN, ESTADO_LABEL, ESTADOS_FINALES, ESTADOS } from '../constants';
 import { IconCheck } from '../../../components/ui/icons';
 
-export default function StatusChanger({ estadoActual, onCambiar, cambiando }) {
+export default function StatusChanger({ estadoActual, onCambiar, cambiando, esAdmin = false }) {
   const casoEnEstadoFinal = ESTADOS_FINALES.includes(estadoActual);
+  const esperaDocumentacion = estadoActual === ESTADOS.FALTA_DOCUMENTACION;
+  const bloqueado = casoEnEstadoFinal || esperaDocumentacion;
+  const puedeCambiar = esAdmin || !bloqueado;
+
+  let hint = null;
+  if (casoEnEstadoFinal) {
+    hint = esAdmin
+      ? 'Caso en estado final. Como tesorero puedes corregirlo manualmente.'
+      : 'El caso está aprobado o rechazado. Solo el tesorero (admin) puede corregir su estado.';
+  } else if (esperaDocumentacion) {
+    hint = esAdmin
+      ? 'Esperando documentación del estudiante. Como tesorero puedes avanzar el caso manualmente.'
+      : 'El caso espera la documentación del estudiante. El estado cambiará automáticamente cuando la adjunte.';
+  }
 
   return (
     <div className="sidebar-card">
@@ -16,17 +30,18 @@ export default function StatusChanger({ estadoActual, onCambiar, cambiando }) {
             key={estado}
             type="button"
             className={`status-option${estado === estadoActual ? ' selected' : ''}`}
-            disabled={cambiando || estado === estadoActual}
+            disabled={cambiando || estado === estadoActual || !puedeCambiar}
             onClick={() => onCambiar(estado)}
+            title={!puedeCambiar ? hint : undefined}
           >
             <span className="radio" />
             {ESTADO_LABEL[estado]}
           </button>
         ))}
       </div>
-      {casoEnEstadoFinal && (
+      {hint && (
         <p className="empty-hint" style={{ marginTop: 10 }}>
-          Este caso está en un estado final. Su lógica de reapertura aún está por definir.
+          {hint}
         </p>
       )}
     </div>

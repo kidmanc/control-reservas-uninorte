@@ -23,6 +23,18 @@
 .info-item .label { font-size: 11.5px; font-weight: 700; color: #948f85; text-transform: uppercase; letter-spacing: .03em; margin-bottom: 4px; font-family: var(--font-display); }
 .info-item .value { font-size: 14px; font-weight: 600; color: var(--negro); }
 
+.info-item .detalle-select {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--card);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--negro);
+  font-family: var(--font-body);
+}
+
 .motivo-box { background: #fdfcfa; border: 1px solid var(--border); border-radius: 12px; padding: 16px; margin-top: 20px; font-size: 13.5px; line-height: 1.6; color: #3a3936; }
 
 .tab-row { display: flex; gap: 4px; border-bottom: 1px solid var(--border); margin-bottom: 20px; }

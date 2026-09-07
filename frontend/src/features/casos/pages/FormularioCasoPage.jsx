@@ -3,7 +3,7 @@ import { Link, useLocation } from 'react-router-dom';
 import PanelSidebar from '../../../components/layout/PanelSidebar';
 import { IconBack } from '../../../components/ui/icons';
 import { crearCaso } from '../api/casosApi';
-import { TIPOS_SOLICITUD, TIPO_SOLICITUD_LABEL, PARENTESCOS } from '../constants';
+import { TIPOS_SOLICITUD, TIPO_SOLICITUD_LABEL, PARENTESCOS, NIVELES_ACADEMICOS, NIVEL_ACADEMICO_LABEL } from '../constants';
 import { IconClock, IconInfo, IconUsers, IconUpload, IconCheckCircle, IconFile, IconArrowRight } from '../../../components/ui/icons';
 import './FormularioCasoPage.css';
 
@@ -18,6 +18,7 @@ const ESTADO_INICIAL = {
   correo_institucional: '',
   telefono_contacto: '',
   tipo_solicitud: '',
+  nivel_academico: 'pregrado',
   programa_academico: PROGRAMAS[0],
   periodo_academico: PERIODOS[0],
   motivo: '',
@@ -78,6 +79,7 @@ export default function FormularioCasoPage() {
         telefono_contacto: form.telefono_contacto,
         programa_academico: form.programa_academico,
         tipo_solicitud: form.tipo_solicitud,
+        nivel_academico: form.nivel_academico,
         periodo_academico: form.periodo_academico,
         motivo: form.motivo,
         descripcion_adjuntos: form.descripcion_adjuntos,
@@ -346,6 +348,16 @@ export default function FormularioCasoPage() {
                 Elige "Reserva" si necesitas aplazar tu ingreso por una causa excepcional, o "Devolución" si
                 solicitas el reembolso de un valor pagado.
               </span>
+            </div>
+            <div className="field">
+              <label>Nivel académico</label>
+              <select value={form.nivel_academico} onChange={(e) => set('nivel_academico', e.target.value)}>
+                {Object.values(NIVELES_ACADEMICOS).map((n) => (
+                  <option key={n} value={n}>
+                    {NIVEL_ACADEMICO_LABEL[n]}
+                  </option>
+                ))}
+              </select>
             </div>
             <div className="field">
               <label>Programa académico</label>

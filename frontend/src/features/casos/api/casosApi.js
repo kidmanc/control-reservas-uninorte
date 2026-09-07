@@ -70,6 +70,7 @@ export async function crearCaso(payload) {
     telefono_contacto: payload.telefono_contacto,
     programa_academico: payload.programa_academico,
     tipo_solicitud: payload.tipo_solicitud,
+    nivel_academico: payload.nivel_academico,
     periodo_academico: payload.periodo_academico,
     motivo: payload.motivo,
     tercero: payload.tercero || null,
@@ -91,6 +92,15 @@ export async function cambiarEstado(numeroCaso, nuevoEstado) {
   await request(`/casos/${db_id}/estado`, {
     method: 'PATCH',
     body: JSON.stringify({ nuevo_estado: nuevoEstado }),
+  });
+  return getCaso(numeroCaso);
+}
+
+export async function actualizarCasoDecision(numeroCaso, cambios) {
+  const { db_id } = await getCaso(numeroCaso);
+  await request(`/casos/${db_id}/decision`, {
+    method: 'PATCH',
+    body: JSON.stringify(cambios),
   });
   return getCaso(numeroCaso);
 }

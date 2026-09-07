@@ -4,6 +4,7 @@ from fastapi import HTTPException
 
 from archivos.archivos_model import Archivo
 from casos.casos_model import Caso, EstadoCaso
+from historial.historial_model import HistorialEstado
 
 
 async def validar_carga_estudiante_action(db: AsyncSession, caso_id: int) -> None:
@@ -31,6 +32,20 @@ async def subir_archivo_action(db: AsyncSession, caso_id: int, data: dict) -> Ar
         descripcion=data.get("descripcion"),
     )
     db.add(archivo)
+
+    # Al recibir la documentación solicitada, el caso vuelve a revisión automáticamente.
+    if caso.estado == EstadoCaso.FALTA_DOCUMENTACION:
+        caso.estado = EstadoCaso.EN_REVISION
+        db.add(
+            HistorialEstado(
+                caso_id=caso_id,
+                estado_anterior=EstadoCaso.FALTA_DOCUMENTACION.value,
+                estado_nuevo=EstadoCaso.EN_REVISION.value,
+                cambiado_por="sistema",
+                descripcion="El estudiante adjuntó la documentación solicitada",
+            )
+        )
+
     await db.commit()
     await db.refresh(archivo)
     return archivo

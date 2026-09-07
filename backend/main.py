@@ -3,9 +3,13 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
 from sqlalchemy.orm import DeclarativeBase
 from contextlib import asynccontextmanager
+import asyncio
+import logging
 import os
 
 from config import settings
+
+logger = logging.getLogger("uvicorn.error")
 
 # --- Database ---
 
@@ -22,15 +26,63 @@ async def get_db():
         yield session
 
 
+# Columnas nuevas que `create_all` no agrega a una base SQLite existente.
+NUEVAS_COLUMNAS_CASOS = {
+    "nivel_academico": "VARCHAR(50)",
+    "porcentaje_aplicado": "FLOAT",
+    "destino_devolucion": "VARCHAR(50)",
+}
+
+
+async def asegurar_columnas_casos(conn) -> None:
+    """Migración ligera: agrega con ALTER TABLE las columnas que falten."""
+
+    def _ejecutar(conn_sync) -> None:
+        existentes = {fila[1] for fila in conn_sync.exec_driver_sql("PRAGMA table_info(casos)")}
+        for nombre, tipo in NUEVAS_COLUMNAS_CASOS.items():
+            if nombre not in existentes:
+                conn_sync.exec_driver_sql(f"ALTER TABLE casos ADD COLUMN {nombre} {tipo}")
+
+    await conn.run_sync(_ejecutar)
+
+
+async def procesar_transiciones_automaticas() -> None:
+    from casos.auto_transiciones import transicionar_automatica_action
+
+    async with async_session() as db:
+        cantidad = await transicionar_automatica_action(db)
+        if cantidad:
+            logger.info("Transición automática: %d caso(s) pasaron a revisión.", cantidad)
+
+
+async def tarea_transiciones_automaticas() -> None:
+    while True:
+        await asyncio.sleep(settings.CHECK_INTERVAL_SECONDS)
+        try:
+            await procesar_transiciones_automaticas()
+        except Exception as error:  # noqa: BLE001 — el ciclo no puede morir
+            logger.warning("Fallo en transición automática: %s", error)
+
+
+_tarea_transiciones: asyncio.Task | None = None
+
+
 # --- App ---
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
-    # Crear tablas al iniciar
+    # Crear tablas al iniciar y migrar columnas nuevas en una BD existente.
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+        await asegurar_columnas_casos(conn)
+
+    global _tarea_transiciones
+    _tarea_transiciones = asyncio.create_task(tarea_transiciones_automaticas())
+
     yield
+
+    _tarea_transiciones.cancel()
 
 
 app = FastAPI(title=settings.APP_NAME, debug=settings.DEBUG, lifespan=lifespan)

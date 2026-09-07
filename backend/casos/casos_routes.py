@@ -4,13 +4,20 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from main import get_db
 from auth.auth_routes import get_current_user
-from casos.casos_schema import CasoCreate, CasoResponse, CasoDetalle, CambiarEstadoRequest
+from casos.casos_schema import (
+    CasoCreate,
+    CasoResponse,
+    CasoDetalle,
+    CambiarEstadoRequest,
+    ActualizarDecisionRequest,
+)
 from casos.casos_controller import (
     crear_caso_controller,
     listar_casos_controller,
     obtener_caso_controller,
     obtener_caso_por_numero_controller,
     cambiar_estado_controller,
+    actualizar_decision_controller,
 )
 
 router = APIRouter(prefix="/api/casos", tags=["casos"])
@@ -72,6 +79,26 @@ async def cambiar_estado(caso_id: int, request: CambiarEstadoRequest, db: AsyncS
         request.nuevo_estado,
         cambiado_por=user["nombre"],
         descripcion=request.descripcion,
+        rol=user["rol"],
+    )
+    if not caso:
+        raise HTTPException(status_code=404, detail="Caso no encontrado")
+    return caso
+
+
+@router.patch("/{caso_id}/decision", response_model=CasoResponse)
+async def actualizar_decision(
+    caso_id: int,
+    request: ActualizarDecisionRequest,
+    db: AsyncSession = Depends(get_db),
+    user: dict = Depends(get_current_user),
+):
+    """Actualiza nivel académico, porcentaje aplicado y/o destino de la devolución."""
+    caso = await actualizar_decision_controller(
+        db,
+        caso_id,
+        request.model_dump(exclude_none=True),
+        cambiado_por=user["nombre"],
     )
     if not caso:
         raise HTTPException(status_code=404, detail="Caso no encontrado")
