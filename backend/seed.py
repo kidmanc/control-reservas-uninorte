@@ -68,9 +68,9 @@ async def seed():
         # Son datos de ejemplo para desarrollo: la tesorera los reemplaza
         # con las cuentas reales desde Gestión de usuarios.
         semillas_flujo = [
-            ("Mónica", "monica@uninorte.edu.co", "asistente_tesoreria", "M"),
-            ("Robin", "robin@uninorte.edu.co", "revisor", "R"),
-            ("JG", "jg@uninorte.edu.co", "aprobador", "JG"),
+            ("Mónica Correa", "monica@uninorte.edu.co", "asistente_tesoreria", "MC"),
+            ("Robin Pérez", "robin@uninorte.edu.co", "revisor", "RP"),
+            ("JG Gómez", "jg@uninorte.edu.co", "aprobador", "JG"),
         ]
         for nombre, correo, rol, iniciales in semillas_flujo:
             result = await db.execute(select(Usuario).where(Usuario.correo == correo))
@@ -87,9 +87,11 @@ async def seed():
                     )
                 )
                 print(f"Semilla creado: {correo} / password123 ({rol})")
-            elif existente.rol != rol:
+            elif existente.rol != rol or existente.nombre != nombre or existente.iniciales != iniciales:
+                existente.nombre = nombre
                 existente.rol = rol
-                print(f"Semilla actualizado al rol {rol}: {correo}")
+                existente.iniciales = iniciales
+                print(f"Semilla actualizado: {correo} ({rol})")
         await db.commit()
 
     await engine.dispose()
