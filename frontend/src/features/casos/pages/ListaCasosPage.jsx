@@ -64,30 +64,42 @@ export default function ListaCasosPage() {
   }, [esOperador]);
 
   const conteos = useMemo(() => {
-    const base = { total: casos.length };
+    // Para quien opera en el flujo, los conteos cubren bandeja + historial.
+    const base = esOperador ? [...casos, ...participados] : casos;
+    const total = { total: base.length };
     for (const estado of ESTADOS_ORDEN) {
-      base[estado] = casos.filter((c) => c.estado === estado).length;
+      total[estado] = base.filter((c) => c.estado === estado).length;
     }
-    return base;
-  }, [casos]);
+    return total;
+  }, [casos, participados, esOperador]);
 
-  const casosFiltrados = useMemo(() => {
-    return casos.filter((c) => {
-      if (filtroEstado && c.estado !== filtroEstado) return false;
-      if (filtroTipo && c.tipo_solicitud !== filtroTipo) return false;
-      if (soloTerceros && !c.tercero) return false;
-      if (busqueda) {
-        const q = busqueda.toLowerCase();
-        const coincide =
-          c.nombre_completo.toLowerCase().includes(q) ||
-          c.codigo_estudiantil.toLowerCase().includes(q) ||
-          c.correo_institucional.toLowerCase().includes(q) ||
-          c.id.toLowerCase().includes(q);
-        if (!coincide) return false;
-      }
-      return true;
-    });
-  }, [casos, filtroEstado, filtroTipo, soloTerceros, busqueda]);
+  function pasaFiltros(c) {
+    if (filtroEstado && c.estado !== filtroEstado) return false;
+    if (filtroTipo && c.tipo_solicitud !== filtroTipo) return false;
+    if (soloTerceros && !c.tercero) return false;
+    if (busqueda) {
+      const q = busqueda.toLowerCase();
+      const coincide =
+        c.nombre_completo.toLowerCase().includes(q) ||
+        c.codigo_estudiantil.toLowerCase().includes(q) ||
+        c.correo_institucional.toLowerCase().includes(q) ||
+        c.id.toLowerCase().includes(q);
+      if (!coincide) return false;
+    }
+    return true;
+  }
+
+  const casosFiltrados = useMemo(
+    () => casos.filter(pasaFiltros),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [casos, filtroEstado, filtroTipo, soloTerceros, busqueda],
+  );
+
+  const participadosFiltrados = useMemo(
+    () => participados.filter(pasaFiltros),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [participados, filtroEstado, filtroTipo, soloTerceros, busqueda],
+  );
 
   return (
     <div className="panel-layout">
@@ -197,10 +209,14 @@ export default function ListaCasosPage() {
 
         {esOperador && !cargando && !errorCarga && (
           <div className="historial-section">
-            <h2 className="historial-title">Historial: casos en los que participaste ({participados.length})</h2>
+            <h2 className="historial-title">Historial: casos en los que participaste ({participadosFiltrados.length})</h2>
             <p className="empty-hint">Solo lectura: ya no están en tus manos, pero quedan en tu historial.</p>
-            {participados.length === 0 ? (
-              <div className="empty-row">Aún no tienes casos en tu historial. Aparecerán aquí los casos que pasen por tus manos.</div>
+            {participadosFiltrados.length === 0 ? (
+              <div className="empty-row">
+                {participados.length === 0
+                  ? 'Aún no tienes casos en tu historial. Aparecerán aquí los casos que pasen por tus manos.'
+                  : 'Ningún caso del historial coincide con estos filtros.'}
+              </div>
             ) : (
               <div className="case-table">
                 <div className="case-row header-row">
@@ -213,7 +229,7 @@ export default function ListaCasosPage() {
                   <span>Asignado</span>
                   <span></span>
                 </div>
-                {participados.map((caso) => (
+                {participadosFiltrados.map((caso) => (
                   <FilaCaso
                     key={caso.id}
                     caso={caso}

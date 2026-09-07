@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
 from sqlalchemy.orm import DeclarativeBase
 from contextlib import asynccontextmanager
@@ -66,6 +67,31 @@ async def tarea_transiciones_automaticas() -> None:
             logger.warning("Fallo en transición automática: %s", error)
 
 
+async def registrar_participaciones_existentes() -> None:
+    """Backfill idempotente: casos asignados antes de existir el historial."""
+    from casos.casos_model import Caso, ParticipacionCaso
+
+    async with async_session() as db:
+        result = await db.execute(
+            select(Caso).where(
+                (Caso.revisor_asignado_id.is_not(None)) | (Caso.remitido_por_id.is_not(None))
+            )
+        )
+        for caso in result.scalars().all():
+            for uid in {caso.revisor_asignado_id, caso.remitido_por_id}:
+                if uid is None:
+                    continue
+                existe = await db.execute(
+                    select(ParticipacionCaso).where(
+                        ParticipacionCaso.caso_id == caso.id,
+                        ParticipacionCaso.usuario_id == uid,
+                    )
+                )
+                if not existe.scalar_one_or_none():
+                    db.add(ParticipacionCaso(caso_id=caso.id, usuario_id=uid))
+        await db.commit()
+
+
 _tarea_transiciones: asyncio.Task | None = None
 
 
@@ -78,6 +104,9 @@ async def lifespan(app: FastAPI):
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
         await asegurar_columnas_casos(conn)
+
+    # Registrar participaciones de casos asignados antes de esta función.
+    await registrar_participaciones_existentes()
 
     global _tarea_transiciones
     _tarea_transiciones = asyncio.create_task(tarea_transiciones_automaticas())

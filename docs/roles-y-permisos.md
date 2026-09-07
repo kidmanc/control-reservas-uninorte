@@ -9,7 +9,7 @@ El caso siempre está **en manos de una sola persona**. Los pasos válidos son:
 1. **Tesorería (asistente)** recibe, revisa y liquida → envía al **Centro Médico** (si requiere validación médica) o a **Revisión de detalle**.
 2. **Centro Médico** valida los documentos → devuelve a Tesorería con su veredicto.
 3. **Revisión de detalle** revisa → envía a **Aprobación final** o devuelve a Tesorería con correcciones.
-4. **Aprobación final** aprueba/rechaza (fija porcentaje y destino) o devuelve a Revisión de detalle con correcciones.
+4. **Aprobación final** aprueba/rechaza (fija porcentaje y destino) o devuelve a Revisión de detalle con correcciones. Al aprobarse o rechazarse, el caso **vuelve a Tesorería**: sale de la bandeja del aprobador y queda en los historiales.
 
 ## Qué puede hacer cada rol
 
@@ -38,5 +38,6 @@ El caso siempre está **en manos de una sola persona**. Los pasos válidos son:
 
 ## Notas
 
-- El **historial** de cada operador registra los casos que pasaron por sus manos (lectura). Solo cuenta desde que existe esta función: los casos antiguos movidos antes no aparecen.
+- El **historial** de cada operador registra los casos que pasaron por sus manos (lectura). Los filtros de estado, tipo y búsqueda aplican a bandeja e historial a la vez.
+- Los casos movidos antes de existir el historial se registran automáticamente al iniciar el backend (backfill idempotente).
 - Cuentas de ejemplo para desarrollo (contraseña `password123`): se crean con `python seed.py` y la tesorera las reemplaza por las reales en Gestión de usuarios.

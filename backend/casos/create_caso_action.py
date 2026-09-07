@@ -429,6 +429,12 @@ async def cambiar_estado_action(
     estado_anterior = caso.estado
     caso.estado = estado_valido
 
+    # Al cerrarse el caso el flujo termina: vuelve a Tesorería y sale de la
+    # bandeja de quien lo tenía (queda en los historiales).
+    if estado_valido in (EstadoCaso.APROBADO, EstadoCaso.RECHAZADO):
+        caso.revisor_asignado_id = None
+        caso.remitido_por_id = None
+
     # Registrar la transición en el historial en la misma transacción
     db.add(
         HistorialEstado(
