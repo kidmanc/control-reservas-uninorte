@@ -10,7 +10,10 @@
 const API = '/api';
 
 async function request(url, options = {}) {
-  const token = localStorage.getItem('token');
+  // `publica: true` = canal público del estudiante: jamás envía el token del
+  // panel. Sin esto, un navegador con sesión de revisor abierta contaminaría
+  // la vista de seguimiento y el backend aplicaría la restricción de revisor.
+  const token = options.publica ? null : localStorage.getItem('token');
   const headers = { ...options.headers };
   if (token) headers['Authorization'] = `Bearer ${token}`;
   if (options.body && !(options.body instanceof FormData)) {
@@ -59,6 +62,12 @@ export async function listCasos() {
 // getCaso recibe el numero_caso (identificador visible de la URL)
 export async function getCaso(numeroCaso) {
   const caso = await request(`/casos/numero/${numeroCaso}`);
+  return normalizarCaso(caso);
+}
+
+// Variante pública para la página de seguimiento del estudiante (sin token).
+export async function getCasoPublico(numeroCaso) {
+  const caso = await request(`/casos/numero/${numeroCaso}`, { publica: true });
   return normalizarCaso(caso);
 }
 
@@ -139,8 +148,18 @@ export async function agregarComentario(numeroCaso, { texto, visible_para_estudi
   return getCaso(numeroCaso);
 }
 
+export async function agregarComentarioPublico(numeroCaso, { texto, visible_para_estudiante, autor }) {
+  const { db_id } = await getCasoPublico(numeroCaso);
+  await request(`/casos/${db_id}/comentarios/`, {
+    method: 'POST',
+    body: JSON.stringify({ texto, visible_para_estudiante, autor }),
+    publica: true,
+  });
+  return getCasoPublico(numeroCaso);
+}
+
 export async function subirArchivoEstudiante(numeroCaso, archivo) {
-  const { db_id } = await getCaso(numeroCaso);
+  const { db_id } = await getCasoPublico(numeroCaso);
   const formData = new FormData();
   formData.append('archivo', archivo);
   formData.append('subido_por', 'estudiante');
@@ -148,6 +167,7 @@ export async function subirArchivoEstudiante(numeroCaso, archivo) {
   await request(`/casos/${db_id}/archivos/`, {
     method: 'POST',
     body: formData,
+    publica: true,
   });
-  return getCaso(numeroCaso);
+  return getCasoPublico(numeroCaso);
 }

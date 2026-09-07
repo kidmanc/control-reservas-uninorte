@@ -3,7 +3,7 @@ import { useParams } from 'react-router-dom';
 import EstadoBadge from '../../../components/ui/EstadoBadge';
 import TipoTag from '../../../components/ui/TipoTag';
 import { IconFile, IconUpload, IconWarning, IconReceived, IconCheckCircle } from '../../../components/ui/icons';
-import { getCaso, agregarComentario, subirArchivoEstudiante } from '../api/casosApi';
+import { getCasoPublico, agregarComentarioPublico, subirArchivoEstudiante } from '../api/casosApi';
 import { ESTADOS, ESTADOS_FINALES } from '../constants';
 import '../../casos/pages/FormularioCasoPage.css';
 import './DetalleCasoPage.css';
@@ -43,7 +43,7 @@ export default function SeguimientoCasoPage() {
   const cargar = useCallback(async () => {
     setCargando(true);
     try {
-      const data = await getCaso(id);
+      const data = await getCasoPublico(id);
       setCaso(data);
       setErrorCarga(null);
     } catch (err) {
@@ -64,7 +64,7 @@ export default function SeguimientoCasoPage() {
     setErrorAccion(null);
     try {
       // Todo lo que escribe el estudiante/tercero queda visible para Tesorería por definición.
-      const actualizado = await agregarComentario(id, {
+      const actualizado = await agregarComentarioPublico(id, {
         texto: respuesta.trim(),
         visible_para_estudiante: true,
         autor: caso.tercero ? caso.tercero.nombre_completo : caso.nombre_completo,
