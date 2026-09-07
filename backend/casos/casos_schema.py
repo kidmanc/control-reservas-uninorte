@@ -82,7 +82,7 @@ class CambiarEstadoRequest(BaseModel):
     @classmethod
     def validar_estado(cls, valor: str) -> str:
         # Estados válidos según el enum EstadoCaso.
-        if valor not in {"recibido", "en_revision", "falta_documentacion", "aprobado", "rechazado"}:
+        if valor not in {"recibido", "falta_documentacion", "aprobado", "rechazado"}:
             raise ValueError(f"Estado inválido: {valor}")
         return valor
 

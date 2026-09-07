@@ -4,7 +4,6 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
 from sqlalchemy.orm import DeclarativeBase
 from contextlib import asynccontextmanager
-import asyncio
 import logging
 import os
 import re
@@ -50,22 +49,20 @@ async def asegurar_columnas_casos(conn) -> None:
     await conn.run_sync(_ejecutar)
 
 
-async def procesar_transiciones_automaticas() -> None:
-    from casos.auto_transiciones import transicionar_automatica_action
+async def retirar_estado_en_revision(conn) -> int:
+    """Migración única: los casos en revisión vuelven a recibido.
 
-    async with async_session() as db:
-        cantidad = await transicionar_automatica_action(db)
-        if cantidad:
-            logger.info("Transición automática: %d caso(s) pasaron a revisión.", cantidad)
+    El estado `en_revision` se eliminó del flujo (nadie lo usa); los
+    existentes se devuelven a `recibido`. Idempotente.
+    """
 
+    def _ejecutar(conn_sync) -> int:
+        resultado = conn_sync.exec_driver_sql(
+            "UPDATE casos SET estado = 'recibido' WHERE estado = 'en_revision'"
+        )
+        return resultado.rowcount or 0
 
-async def tarea_transiciones_automaticas() -> None:
-    while True:
-        await asyncio.sleep(settings.CHECK_INTERVAL_SECONDS)
-        try:
-            await procesar_transiciones_automaticas()
-        except Exception as error:  # noqa: BLE001 — el ciclo no puede morir
-            logger.warning("Fallo en transición automática: %s", error)
+    return await conn.run_sync(_ejecutar)
 
 
 async def registrar_participaciones_existentes() -> int:
@@ -211,9 +208,6 @@ async def registrar_participaciones_desde_historial() -> int:
     return agregados
 
 
-_tarea_transiciones: asyncio.Task | None = None
-
-
 # --- App ---
 
 @asynccontextmanager
@@ -223,6 +217,9 @@ async def lifespan(app: FastAPI):
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
         await asegurar_columnas_casos(conn)
+        retirados = await retirar_estado_en_revision(conn)
+        if retirados:
+            logger.info("Migración en_revision: %d caso(s) devueltos a recibido.", retirados)
 
     # Backfills idempotentes (nunca tumban el arranque; dejan rastro en el log).
     for tarea, nombre in (
@@ -236,12 +233,7 @@ async def lifespan(app: FastAPI):
         except Exception as error:  # noqa: BLE001 — arrancar es más importante
             logger.warning("Backfill %s omitido: %s", nombre, error)
 
-    global _tarea_transiciones
-    _tarea_transiciones = asyncio.create_task(tarea_transiciones_automaticas())
-
     yield
-
-    _tarea_transiciones.cancel()
 
 
 app = FastAPI(title=settings.APP_NAME, debug=settings.DEBUG, lifespan=lifespan)

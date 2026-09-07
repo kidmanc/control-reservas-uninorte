@@ -23,12 +23,18 @@
 .type-chip.active { background: var(--negro); border-color: var(--negro); color: white; }
 .type-chip .swatch { width: 8px; height: 8px; border-radius: 50%; }
 
-.toolbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+.toolbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; gap: 12px; }
 .search-input {
   display: flex; align-items: center; gap: 10px; background: var(--card); border: 1.5px solid var(--border);
   border-radius: 10px; padding: 10px 14px; width: 320px;
 }
 .search-input input { border: none; outline: none; font-size: 13.5px; font-family: var(--font-body); background: transparent; width: 100%; }
+
+.estado-select {
+  font-family: var(--font-body); font-size: 13px; font-weight: 600; padding: 10px 14px;
+  border: 1.5px solid var(--border); border-radius: 10px; background: var(--card); color: var(--negro);
+  cursor: pointer;
+}
 
 .case-table { background: var(--card); border: 1px solid var(--border); border-radius: 16px; overflow: hidden; }
 .case-row {

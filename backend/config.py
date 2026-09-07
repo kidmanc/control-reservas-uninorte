@@ -19,14 +19,6 @@ class Settings(BaseSettings):
     # Puede sobreescribirse desde .env sin cambiar el código.
     INSTITUTIONAL_EMAIL_DOMAIN: str = "uninorte.edu.co"
 
-    # Reglas de negocio: transición automática de estado.
-    # Tras este número de horas desde la creación, "recibido" pasa a "en_revision"
-    # si el caso no está esperando documentación ni en un estado final.
-    HORAS_CAMBIO_AUTOMATICO: int = 24
-
-    # Intervalo (segundos) con el que el proceso interno revisa los vencimientos.
-    CHECK_INTERVAL_SECONDS: int = 300
-
     @property
     def DATABASE_URL(self) -> str:
         return f"sqlite+aiosqlite:///{self.DB_PATH}"

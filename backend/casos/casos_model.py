@@ -8,7 +8,6 @@ from main import Base
 
 class EstadoCaso(str, enum.Enum):
     RECIBIDO = "recibido"
-    EN_REVISION = "en_revision"
     FALTA_DOCUMENTACION = "falta_documentacion"
     APROBADO = "aprobado"
     RECHAZADO = "rechazado"

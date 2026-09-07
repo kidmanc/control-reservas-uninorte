@@ -10,9 +10,9 @@ export const ESTADOS = {
 };
 
 // Orden en el que se muestran en filtros, selects de cambio de estado, etc.
+// (`en_revision` se retiró del flujo; se conserva el enum para la trazabilidad vieja).
 export const ESTADOS_ORDEN = [
   ESTADOS.RECIBIDO,
-  ESTADOS.EN_REVISION,
   ESTADOS.FALTA_DOCUMENTACION,
   ESTADOS.APROBADO,
   ESTADOS.RECHAZADO,

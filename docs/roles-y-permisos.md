@@ -29,16 +29,16 @@ El caso siempre está **en manos de una sola persona**. Los pasos válidos son:
 - El Aprobador solo puede devolver **a quien se lo envió** (aunque haya varios revisores).
 - Tesorería conserva override para casos borde (ej. remitente inactivo).
 
-## Estados y transición automática
+## Estados
 
-- Estados: `recibido`, `en_revision`, `falta_documentacion`, `aprobado`, `rechazado`.
+- Estados: `recibido`, `falta_documentacion`, `aprobado`, `rechazado`.
 - `recibido` es el estado inicial: una vez que se sale de él no se vuelve (nadie, ni la tesorera).
-- `en_revision` **no es opción manual**: el proceso interno mueve `recibido → en_revision` a las 24 horas sin movimiento.
 - `falta_documentacion` solo lo fija Tesorería (asistente o tesorera).
+- Si el caso está en `falta_documentacion`, al adjuntar el estudiante sus documentos vuelve a `recibido`.
 - Aprobar exige porcentaje (y destino si es devolución); al rechazar, el porcentaje queda en 0% automáticamente.
 - Un caso aprobado o rechazado queda **congelado**: solo la tesorera puede reabrirlo, moverlo o corregir su decisión.
-- Si el caso está en `falta_documentacion`, al adjuntar el estudiante sus documentos vuelve a `recibido` (y a revisión a las 24 horas).
 - Nadie (salvo la tesorera) toca casos en `falta_documentacion` ni en estados finales.
+- El avance del caso se ve en la columna Asignado (quién lo tiene), no en el estado.
 
 ## Canal público y sesiones
 

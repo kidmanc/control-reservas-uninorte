@@ -13,7 +13,6 @@ from casos.create_caso_action import (
     exigir_tenedor_caso_action,
     remitir_caso_action,
 )
-from casos.auto_transiciones import transicionar_automatica_action
 
 
 async def crear_caso_controller(
@@ -63,10 +62,6 @@ async def actualizar_decision_controller(
     actor_id: int | None = None,
 ):
     return await actualizar_decision_action(db, caso_id, data, cambiado_por, rol, actor_id)
-
-
-async def transicionar_automatica_controller(db: AsyncSession) -> int:
-    return await transicionar_automatica_action(db)
 
 
 async def exigir_acceso_caso_controller(db: AsyncSession, caso_id: int, user: dict | None):

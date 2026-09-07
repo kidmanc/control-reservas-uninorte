@@ -12,9 +12,9 @@ import './ListaCasosPage.css';
 
 const ESTADO_STAT_COLOR = {
   [ESTADOS.RECIBIDO]: 'var(--recibido)',
-  [ESTADOS.EN_REVISION]: 'var(--revision)',
   [ESTADOS.FALTA_DOCUMENTACION]: 'var(--amarillo)',
   [ESTADOS.APROBADO]: 'var(--verde)',
+  [ESTADOS.RECHAZADO]: 'var(--rechazado)',
 };
 
 export default function ListaCasosPage() {
@@ -29,6 +29,7 @@ export default function ListaCasosPage() {
   const [filtroTipo, setFiltroTipo] = useState(null);
   const [soloTerceros, setSoloTerceros] = useState(false);
   const [busqueda, setBusqueda] = useState('');
+  const [filtroTenencia, setFiltroTenencia] = useState(null); // operadores: null | 'manos' | 'revisados'
   const [destinatarios, setDestinatarios] = useState([]);
 
   // Mapa id -> usuario para mostrar quién tiene cada caso (columna Asignado).
@@ -75,6 +76,8 @@ export default function ListaCasosPage() {
     if (filtroEstado && c.estado !== filtroEstado) return false;
     if (filtroTipo && c.tipo_solicitud !== filtroTipo) return false;
     if (soloTerceros && !c.tercero) return false;
+    if (esOperador && filtroTenencia === 'manos' && c.revisor_asignado_id !== user?.id) return false;
+    if (esOperador && filtroTenencia === 'revisados' && c.revisor_asignado_id === user?.id) return false;
     if (busqueda) {
       const q = busqueda.toLowerCase();
       const coincide =
@@ -90,8 +93,11 @@ export default function ListaCasosPage() {
   const casosFiltrados = useMemo(
     () => casos.filter(pasaFiltros),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [casos, filtroEstado, filtroTipo, soloTerceros, busqueda],
+    [casos, filtroEstado, filtroTipo, soloTerceros, busqueda, filtroTenencia, esOperador],
   );
+
+  const enManos = casos.filter((c) => c.revisor_asignado_id === user?.id).length;
+  const yaRevisados = casos.length - enManos;
 
   return (
     <div className="panel-layout">
@@ -114,26 +120,47 @@ export default function ListaCasosPage() {
           )}
         </div>
 
-        <div className="stats-row">
-          <button className={`stat-card${!filtroEstado ? ' filter-active' : ''}`} onClick={() => setFiltroEstado(null)}>
-            <div className="stat-num">{conteos.total}</div>
-            <div className="stat-label">Todos los casos</div>
-            <div className="stat-bar" style={{ background: 'var(--negro)' }} />
-          </button>
-          {[ESTADOS.RECIBIDO, ESTADOS.EN_REVISION, ESTADOS.FALTA_DOCUMENTACION, ESTADOS.APROBADO].map((estado) => (
+        {esOperador ? (
+          <div className="stats-row">
             <button
-              key={estado}
-              className={`stat-card${filtroEstado === estado ? ' filter-active' : ''}`}
-              onClick={() => setFiltroEstado(estado)}
+              className={`stat-card${filtroTenencia === 'manos' ? ' filter-active' : ''}`}
+              onClick={() => setFiltroTenencia(filtroTenencia === 'manos' ? null : 'manos')}
             >
-              <div className="stat-num" style={{ color: ESTADO_STAT_COLOR[estado] }}>
-                {conteos[estado]}
-              </div>
-              <div className="stat-label">{ESTADO_LABEL[estado]}</div>
-              <div className="stat-bar" style={{ background: ESTADO_STAT_COLOR[estado] }} />
+              <div className="stat-num">{enManos}</div>
+              <div className="stat-label">En tus manos</div>
+              <div className="stat-bar" style={{ background: 'var(--azul)' }} />
             </button>
-          ))}
-        </div>
+            <button
+              className={`stat-card${filtroTenencia === 'revisados' ? ' filter-active' : ''}`}
+              onClick={() => setFiltroTenencia(filtroTenencia === 'revisados' ? null : 'revisados')}
+            >
+              <div className="stat-num">{yaRevisados}</div>
+              <div className="stat-label">Ya revisados</div>
+              <div className="stat-bar" style={{ background: 'var(--text-secondary)' }} />
+            </button>
+          </div>
+        ) : (
+          <div className="stats-row">
+            <button className={`stat-card${!filtroEstado ? ' filter-active' : ''}`} onClick={() => setFiltroEstado(null)}>
+              <div className="stat-num">{conteos.total}</div>
+              <div className="stat-label">Todos los casos</div>
+              <div className="stat-bar" style={{ background: 'var(--negro)' }} />
+            </button>
+            {ESTADOS_ORDEN.map((estado) => (
+              <button
+                key={estado}
+                className={`stat-card${filtroEstado === estado ? ' filter-active' : ''}`}
+                onClick={() => setFiltroEstado(estado)}
+              >
+                <div className="stat-num" style={{ color: ESTADO_STAT_COLOR[estado] }}>
+                  {conteos[estado]}
+                </div>
+                <div className="stat-label">{ESTADO_LABEL[estado]}</div>
+                <div className="stat-bar" style={{ background: ESTADO_STAT_COLOR[estado] }} />
+              </button>
+            ))}
+          </div>
+        )}
 
         <div className="type-filter-row">
           <button className={`type-chip${!filtroTipo ? ' active' : ''}`} onClick={() => setFiltroTipo(null)}>
@@ -166,6 +193,21 @@ export default function ListaCasosPage() {
               onChange={(e) => setBusqueda(e.target.value)}
             />
           </div>
+          {esOperador && (
+            <select
+              className="estado-select"
+              value={filtroEstado || ''}
+              onChange={(e) => setFiltroEstado(e.target.value || null)}
+              aria-label="Filtrar por estado"
+            >
+              <option value="">Todos los estados</option>
+              {ESTADOS_ORDEN.map((estado) => (
+                <option key={estado} value={estado}>
+                  {ESTADO_LABEL[estado]}
+                </option>
+              ))}
+            </select>
+          )}
         </div>
 
         <div className="case-table">
