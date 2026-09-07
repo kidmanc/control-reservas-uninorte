@@ -5,9 +5,11 @@ import EstadoBadge from '../../../components/ui/EstadoBadge';
 import TipoTag from '../../../components/ui/TipoTag';
 import { IconBack, IconUsers } from '../../../components/ui/icons';
 import { useAuth } from '../../auth/AuthContext';
-import { getCaso, cambiarEstado, agregarComentario, obtenerArchivo, actualizarCasoDecision } from '../api/casosApi';
+import { getCaso, cambiarEstado, agregarComentario, obtenerArchivo, actualizarCasoDecision, remitirCaso } from '../api/casosApi';
+import { listarRevisores } from '../../usuarios/api/usuariosApi';
 import { NIVELES_ACADEMICOS, NIVEL_ACADEMICO_LABEL } from '../constants';
 import StatusChanger from '../components/StatusChanger';
+import RemitirCard from '../components/RemitirCard';
 import FilesSidebar from '../components/FilesSidebar';
 import CommentComposer from '../components/CommentComposer';
 import DetalleTabs from '../components/DetalleTabs';
@@ -27,6 +29,8 @@ export default function DetalleCasoPage() {
   const [errorCarga, setErrorCarga] = useState(null);
   const [cambiandoEstado, setCambiandoEstado] = useState(false);
   const [guardandoDecision, setGuardandoDecision] = useState(false);
+  const [revisores, setRevisores] = useState([]);
+  const [remitiendo, setRemitiendo] = useState(false);
   const [enviandoComentario, setEnviandoComentario] = useState(false);
   const [archivoAbriendoId, setArchivoAbriendoId] = useState(null);
   const [errorAccion, setErrorAccion] = useState(null);
@@ -48,6 +52,15 @@ export default function DetalleCasoPage() {
     setCargando(true);
     cargar();
   }, [cargar]);
+
+  const puedeRemitir = user?.rol === 'admin' || user?.rol === 'asistente_tesoreria';
+
+  useEffect(() => {
+    if (!puedeRemitir) return;
+    listarRevisores()
+      .then(setRevisores)
+      .catch(() => setRevisores([]));
+  }, [puedeRemitir]);
 
   async function onCambiarEstado(nuevoEstado) {
     setCambiandoEstado(true);
@@ -72,6 +85,19 @@ export default function DetalleCasoPage() {
       setErrorAccion(err.message || 'No se pudo guardar la decisión.');
     } finally {
       setGuardandoDecision(false);
+    }
+  }
+
+  async function onRemitir(revisorId) {
+    setRemitiendo(true);
+    setErrorAccion(null);
+    try {
+      const actualizado = await remitirCaso(id, revisorId);
+      setCaso(actualizado);
+    } catch (err) {
+      setErrorAccion(err.message || 'No se pudo remitir el caso.');
+    } finally {
+      setRemitiendo(false);
     }
   }
 
@@ -149,6 +175,7 @@ export default function DetalleCasoPage() {
   }
 
   const esAdmin = user?.rol === 'admin';
+  const esRevisor = user?.rol === 'revisor';
 
   return (
     <div className="panel-layout">
@@ -254,13 +281,28 @@ export default function DetalleCasoPage() {
           {/* Columna derecha */}
           <div>
             {errorAccion && <div className="form-error" style={{ marginBottom: 16 }}>{errorAccion}</div>}
-            <StatusChanger
-              estadoActual={caso.estado}
-              onCambiar={onCambiarEstado}
-              cambiando={cambiandoEstado}
-              esAdmin={esAdmin}
-            />
-            <DecisionCard caso={caso} onCambiar={onCambiarDecision} guardando={guardandoDecision} />
+            {esRevisor && (
+              <div className="sidebar-card">
+                <p className="empty-hint" style={{ marginBottom: 0 }}>
+                  Este caso te fue remitido para revisión. Puedes consultar los soportes y dejar tus comentarios;
+                  la decisión final corresponde a Tesorería.
+                </p>
+              </div>
+            )}
+            {puedeRemitir && (
+              <RemitirCard caso={caso} revisores={revisores} onRemitir={onRemitir} remitiendo={remitiendo} />
+            )}
+            {!esRevisor && (
+              <StatusChanger
+                estadoActual={caso.estado}
+                onCambiar={onCambiarEstado}
+                cambiando={cambiandoEstado}
+                esAdmin={esAdmin}
+              />
+            )}
+            {!esRevisor && (
+              <DecisionCard caso={caso} onCambiar={onCambiarDecision} guardando={guardandoDecision} />
+            )}
             <FilesSidebar
               archivos={caso.archivos}
               onVerArchivo={onVerArchivo}

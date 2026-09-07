@@ -105,6 +105,15 @@ export async function actualizarCasoDecision(numeroCaso, cambios) {
   return getCaso(numeroCaso);
 }
 
+export async function remitirCaso(numeroCaso, revisorId) {
+  const { db_id } = await getCaso(numeroCaso);
+  await request(`/casos/${db_id}/remitir`, {
+    method: 'PATCH',
+    body: JSON.stringify({ revisor_id: revisorId }),
+  });
+  return getCaso(numeroCaso);
+}
+
 export async function obtenerArchivo(casoId, archivoId) {
   const token = localStorage.getItem('token');
   const headers = token ? { Authorization: `Bearer ${token}` } : {};

@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from main import get_db
 from auth.auth_routes import get_current_user
 from config import settings
+from casos.casos_controller import exigir_acceso_caso_controller
 from archivos.storage import guardar_archivo
 from archivos.archivos_schema import ArchivoResponse
 from archivos.archivos_controller import (
@@ -59,6 +60,10 @@ async def descargar_archivo(
     archivo = await obtener_archivo_controller(db, caso_id, archivo_id)
     if not archivo:
         raise HTTPException(status_code=404, detail="Archivo no encontrado")
+
+    # El revisor solo descarga soportes de los casos que le fueron remitidos.
+    if user.get("rol") == "revisor":
+        await exigir_acceso_caso_controller(db, caso_id, user)
 
     directorio = os.path.abspath(settings.UPLOAD_DIR)
     ruta = os.path.abspath(archivo.ruta_almacenamiento)

@@ -4,10 +4,16 @@ import './PanelSidebar.css';
 
 const NAV_ITEMS = [
   { to: '/panel', label: 'Casos', end: true },
-  { to: '/panel/reportes', label: 'Reportes' },
-  { to: '/panel/configuracion', label: 'Configuración' },
+  { to: '/panel/reportes', label: 'Reportes', staffOnly: true },
+  { to: '/panel/configuracion', label: 'Configuración', staffOnly: true },
   { to: '/panel/usuarios', label: 'Usuarios', adminOnly: true },
 ];
+
+const ROL_LABEL = {
+  admin: 'Tesorero',
+  asistente_tesoreria: 'Asistente de Tesorería',
+  revisor: 'Revisor',
+};
 
 export default function PanelSidebar() {
   const { user, logout } = useAuth();
@@ -28,7 +34,11 @@ export default function PanelSidebar() {
         </div>
       </div>
 
-      {NAV_ITEMS.filter((item) => !item.adminOnly || user?.rol === 'admin').map((item) => (
+      {NAV_ITEMS.filter(
+        (item) =>
+          (!item.adminOnly || user?.rol === 'admin') &&
+          (!item.staffOnly || user?.rol !== 'revisor'),
+      ).map((item) => (
         <NavLink
           key={item.to}
           to={item.to}
@@ -43,7 +53,7 @@ export default function PanelSidebar() {
         <div className="avatar">{user?.iniciales || '??'}</div>
         <div style={{ flex: 1 }}>
           <div className="user-name">{user?.nombre || 'Sin sesión'}</div>
-          <div className="user-role">{user?.rol || ''}</div>
+          <div className="user-role">{ROL_LABEL[user?.rol] || user?.rol || ''}</div>
         </div>
         <button
           onClick={onLogout}

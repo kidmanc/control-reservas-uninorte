@@ -41,6 +41,24 @@ async def seed():
             else:
                 print("Tesorero (admin) semilla ya existe")
 
+        # Revisor semilla (Centro Médico) para probar la remisión de casos
+        result = await db.execute(select(Usuario).where(Usuario.correo == "centro.medico@uninorte.edu.co"))
+        centro = result.scalar_one_or_none()
+
+        if not centro:
+            db.add(
+                Usuario(
+                    nombre="Centro Médico",
+                    correo="centro.medico@uninorte.edu.co",
+                    contrasena_hash=hash_contrasena("password123"),
+                    rol="revisor",
+                    iniciales="CEM",
+                    activo=True,
+                )
+            )
+            await db.commit()
+            print("Revisor semilla creado: centro.medico@uninorte.edu.co / password123")
+
     await engine.dispose()
 
 

@@ -4,6 +4,7 @@ import PanelSidebar from '../../../components/layout/PanelSidebar';
 import EstadoBadge from '../../../components/ui/EstadoBadge';
 import TipoTag from '../../../components/ui/TipoTag';
 import { IconPlus, IconSearch, IconUsers } from '../../../components/ui/icons';
+import { useAuth } from '../../auth/AuthContext';
 import { listCasos } from '../api/casosApi';
 import { ESTADOS, ESTADOS_ORDEN, ESTADO_LABEL, TIPOS_SOLICITUD, TIPO_SOLICITUD_TAG_LABEL } from '../constants';
 import './ListaCasosPage.css';
@@ -17,6 +18,8 @@ const ESTADO_STAT_COLOR = {
 
 export default function ListaCasosPage() {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const esRevisor = user?.rol === 'revisor';
   const [casos, setCasos] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [errorCarga, setErrorCarga] = useState(null);
@@ -78,12 +81,18 @@ export default function ListaCasosPage() {
         <div className="panel-header">
           <div>
             <h1>Casos especiales</h1>
-            <div className="sub">Reservas de matrícula por causa especial y devoluciones — gestión y trazabilidad</div>
+            <div className="sub">
+              {esRevisor
+                ? 'Solo ves los casos que Tesorería te remitió para revisión'
+                : 'Reservas de matrícula por causa especial y devoluciones — gestión y trazabilidad'}
+            </div>
           </div>
-          <button className="btn-primary" style={{ background: 'var(--negro)' }} onClick={() => navigate('/panel/casos/nueva')}>
-            <IconPlus />
-            Nuevo caso manual
-          </button>
+          {!esRevisor && (
+            <button className="btn-primary" style={{ background: 'var(--negro)' }} onClick={() => navigate('/panel/casos/nueva')}>
+              <IconPlus />
+              Nuevo caso manual
+            </button>
+          )}
         </div>
 
         <div className="stats-row">

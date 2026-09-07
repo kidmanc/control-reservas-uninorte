@@ -7,6 +7,9 @@ from casos.create_caso_action import (
     obtener_caso_por_numero_action,
     cambiar_estado_action,
     actualizar_decision_action,
+    exigir_acceso_caso_action,
+    exigir_acceso_caso_por_numero_action,
+    remitir_caso_action,
 )
 from casos.auto_transiciones import transicionar_automatica_action
 
@@ -21,8 +24,8 @@ async def crear_caso_controller(
     return await crear_caso_action(db, data, tercero, archivos, subido_por)
 
 
-async def listar_casos_controller(db: AsyncSession):
-    return await listar_casos_action(db)
+async def listar_casos_controller(db: AsyncSession, user: dict | None = None):
+    return await listar_casos_action(db, user)
 
 
 async def obtener_caso_controller(db: AsyncSession, caso_id: int):
@@ -55,3 +58,20 @@ async def actualizar_decision_controller(
 
 async def transicionar_automatica_controller(db: AsyncSession) -> int:
     return await transicionar_automatica_action(db)
+
+
+async def exigir_acceso_caso_controller(db: AsyncSession, caso_id: int, user: dict | None):
+    return await exigir_acceso_caso_action(db, caso_id, user)
+
+
+async def exigir_acceso_caso_por_numero_controller(db: AsyncSession, numero: str, user: dict | None):
+    return await exigir_acceso_caso_por_numero_action(db, numero, user)
+
+
+async def remitir_caso_controller(
+    db: AsyncSession,
+    caso_id: int,
+    revisor_id: int | None,
+    cambiado_por: str,
+):
+    return await remitir_caso_action(db, caso_id, revisor_id, cambiado_por)

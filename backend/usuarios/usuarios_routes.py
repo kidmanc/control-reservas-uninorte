@@ -7,6 +7,7 @@ from usuarios.usuarios_schema import UsuarioCreate, UsuarioUpdate, UsuarioRespon
 from usuarios.usuarios_controller import (
     crear_usuario_controller,
     listar_usuarios_controller,
+    listar_revisores_controller,
     actualizar_usuario_controller,
 )
 
@@ -16,6 +17,18 @@ router = APIRouter(prefix="/api/usuarios", tags=["usuarios"])
 def _exigir_admin(user: dict):
     if user.get("rol") != "admin":
         raise HTTPException(status_code=403, detail="Solo el tesorero (admin) puede gestionar usuarios")
+
+
+def _exigir_staff(user: dict):
+    if user.get("rol") not in {"admin", "asistente_tesoreria"}:
+        raise HTTPException(status_code=403, detail="Solo el personal de Tesorería puede ver esta información")
+
+
+@router.get("/revisores", response_model=list[UsuarioResponse])
+async def listar_revisores(db: AsyncSession = Depends(get_db), user: dict = Depends(get_current_user)):
+    """Revisores activos disponibles para remitir casos (incluye al Centro Médico)."""
+    _exigir_staff(user)
+    return await listar_revisores_controller(db)
 
 
 @router.get("/", response_model=list[UsuarioResponse])

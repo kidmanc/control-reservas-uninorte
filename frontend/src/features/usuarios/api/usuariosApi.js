@@ -39,3 +39,7 @@ export async function actualizarUsuario(id, cambios) {
     body: JSON.stringify(cambios),
   });
 }
+
+export async function listarRevisores() {
+  return request('/usuarios/revisores');
+}

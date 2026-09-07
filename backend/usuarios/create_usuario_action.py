@@ -6,11 +6,21 @@ from usuarios.usuarios_model import Usuario
 from auth.login_action import hash_contrasena
 
 # Roles permitidos al crear usuarios desde el panel (rol de destino)
-ROLES_PERMITIDOS = {"asistente_tesoreria", "admin"}
+ROLES_PERMITIDOS = {"asistente_tesoreria", "admin", "revisor"}
 
 
 async def listar_usuarios_action(db: AsyncSession) -> list[Usuario]:
     result = await db.execute(select(Usuario).order_by(Usuario.nombre))
+    return list(result.scalars().all())
+
+
+async def listar_revisores_action(db: AsyncSession) -> list[Usuario]:
+    """Revisores activos (incluye al Centro Médico) para remitir casos."""
+    result = await db.execute(
+        select(Usuario)
+        .where(Usuario.rol == "revisor", Usuario.activo.is_not(False))
+        .order_by(Usuario.nombre)
+    )
     return list(result.scalars().all())
 
 

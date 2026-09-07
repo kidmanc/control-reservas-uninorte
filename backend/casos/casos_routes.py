@@ -3,13 +3,14 @@ from pydantic import ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from main import get_db
-from auth.auth_routes import get_current_user
+from auth.auth_routes import get_current_user, get_current_user_optional
 from casos.casos_schema import (
     CasoCreate,
     CasoResponse,
     CasoDetalle,
     CambiarEstadoRequest,
     ActualizarDecisionRequest,
+    RemitirCasoRequest,
 )
 from casos.casos_controller import (
     crear_caso_controller,
@@ -18,6 +19,9 @@ from casos.casos_controller import (
     obtener_caso_por_numero_controller,
     cambiar_estado_controller,
     actualizar_decision_controller,
+    exigir_acceso_caso_controller,
+    exigir_acceso_caso_por_numero_controller,
+    remitir_caso_controller,
 )
 
 router = APIRouter(prefix="/api/casos", tags=["casos"])
@@ -51,28 +55,40 @@ async def crear_caso(
 
 @router.get("/", response_model=list[CasoResponse])
 async def listar_casos(db: AsyncSession = Depends(get_db), user: dict = Depends(get_current_user)):
-    casos = await listar_casos_controller(db)
+    casos = await listar_casos_controller(db, user)
     return casos
 
 
+def _bloquear_revisor_escritura(user: dict, accion: str):
+    """El revisor consulta y comenta; no cambia estados ni decisiones."""
+    if user.get("rol") == "revisor":
+        raise HTTPException(
+            status_code=403,
+            detail=f"Los revisores solo pueden consultar y comentar los casos. {accion} corresponde a Tesorería.",
+        )
+
+
 @router.get("/{caso_id}", response_model=CasoDetalle)
-async def obtener_caso(caso_id: int, db: AsyncSession = Depends(get_db)):
-    caso = await obtener_caso_controller(db, caso_id)
-    if not caso:
-        raise HTTPException(status_code=404, detail="Caso no encontrado")
-    return caso
+async def obtener_caso(
+    caso_id: int,
+    db: AsyncSession = Depends(get_db),
+    user: dict | None = Depends(get_current_user_optional),
+):
+    return await exigir_acceso_caso_controller(db, caso_id, user)
 
 
 @router.get("/numero/{numero}", response_model=CasoDetalle)
-async def obtener_caso_por_numero(numero: str, db: AsyncSession = Depends(get_db)):
-    caso = await obtener_caso_por_numero_controller(db, numero)
-    if not caso:
-        raise HTTPException(status_code=404, detail="Caso no encontrado")
-    return caso
+async def obtener_caso_por_numero(
+    numero: str,
+    db: AsyncSession = Depends(get_db),
+    user: dict | None = Depends(get_current_user_optional),
+):
+    return await exigir_acceso_caso_por_numero_controller(db, numero, user)
 
 
 @router.patch("/{caso_id}/estado", response_model=CasoResponse)
 async def cambiar_estado(caso_id: int, request: CambiarEstadoRequest, db: AsyncSession = Depends(get_db), user: dict = Depends(get_current_user)):
+    _bloquear_revisor_escritura(user, "Cambiar el estado")
     caso = await cambiar_estado_controller(
         db,
         caso_id,
@@ -94,10 +110,32 @@ async def actualizar_decision(
     user: dict = Depends(get_current_user),
 ):
     """Actualiza nivel académico, porcentaje aplicado y/o destino de la devolución."""
+    _bloquear_revisor_escritura(user, "Registrar la decisión")
     caso = await actualizar_decision_controller(
         db,
         caso_id,
         request.model_dump(exclude_none=True),
+        cambiado_por=user["nombre"],
+    )
+    if not caso:
+        raise HTTPException(status_code=404, detail="Caso no encontrado")
+    return caso
+
+
+@router.patch("/{caso_id}/remitir", response_model=CasoResponse)
+async def remitir_caso(
+    caso_id: int,
+    request: RemitirCasoRequest,
+    db: AsyncSession = Depends(get_db),
+    user: dict = Depends(get_current_user),
+):
+    """Remite el caso a un revisor (solo Tesorería: asistente o admin)."""
+    if user.get("rol") not in {"admin", "asistente_tesoreria"}:
+        raise HTTPException(status_code=403, detail="Solo Tesorería puede remitir casos a un revisor")
+    caso = await remitir_caso_controller(
+        db,
+        caso_id,
+        request.revisor_id,
         cambiado_por=user["nombre"],
     )
     if not caso:

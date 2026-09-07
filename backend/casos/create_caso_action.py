@@ -3,6 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi import HTTPException
 
 from casos.casos_model import Caso, EstadoCaso, TipoSolicitud
+from usuarios.usuarios_model import Usuario
 from archivos.archivos_model import Archivo
 from archivos.storage import eliminar_archivos, guardar_archivo
 from historial.historial_model import HistorialEstado
@@ -94,8 +95,12 @@ async def crear_caso_action(
     return caso
 
 
-async def listar_casos_action(db: AsyncSession) -> list[Caso]:
-    result = await db.execute(select(Caso).order_by(Caso.fecha_creacion.desc()))
+async def listar_casos_action(db: AsyncSession, user: dict | None = None) -> list[Caso]:
+    query = select(Caso).order_by(Caso.fecha_creacion.desc())
+    # El revisor solo ve los casos que Tesorería le remitió.
+    if user and user.get("rol") == "revisor":
+        query = query.where(Caso.revisor_asignado_id == user.get("id"))
+    result = await db.execute(query)
     return list(result.scalars().all())
 
 
@@ -107,6 +112,79 @@ async def obtener_caso_action(db: AsyncSession, caso_id: int) -> Caso | None:
 async def obtener_caso_por_numero_action(db: AsyncSession, numero: str) -> Caso | None:
     result = await db.execute(select(Caso).where(Caso.numero_caso == numero))
     return result.scalar_one_or_none()
+
+
+def _es_revisor_sin_acceso(caso: Caso, user: dict | None) -> bool:
+    """True si quien consulta es revisor y el caso no le fue remitido."""
+    return bool(
+        user
+        and user.get("rol") == "revisor"
+        and caso.revisor_asignado_id != user.get("id")
+    )
+
+
+async def exigir_acceso_caso_action(db: AsyncSession, caso_id: int, user: dict | None) -> Caso:
+    """Devuelve el caso o lanza 404/403 (revisor sin remisión)."""
+    caso = await obtener_caso_action(db, caso_id)
+    if not caso:
+        raise HTTPException(status_code=404, detail="Caso no encontrado")
+    if _es_revisor_sin_acceso(caso, user):
+        raise HTTPException(
+            status_code=403,
+            detail="Este caso no te fue remitido. Solo puedes ver los casos asignados a ti.",
+        )
+    return caso
+
+
+async def exigir_acceso_caso_por_numero_action(db: AsyncSession, numero: str, user: dict | None) -> Caso:
+    caso = await obtener_caso_por_numero_action(db, numero)
+    if not caso:
+        raise HTTPException(status_code=404, detail="Caso no encontrado")
+    if _es_revisor_sin_acceso(caso, user):
+        raise HTTPException(
+            status_code=403,
+            detail="Este caso no te fue remitido. Solo puedes ver los casos asignados a ti.",
+        )
+    return caso
+
+
+async def remitir_caso_action(
+    db: AsyncSession,
+    caso_id: int,
+    revisor_id: int | None,
+    cambiado_por: str,
+) -> Caso | None:
+    """Asigna el caso a un revisor (o retira la remisión con None)."""
+    caso = await obtener_caso_action(db, caso_id)
+    if not caso:
+        return None
+
+    if revisor_id is None:
+        caso.revisor_asignado_id = None
+        descripcion = "Se retiró la remisión del caso a revisión"
+    else:
+        revisor = await db.get(Usuario, revisor_id)
+        if not revisor or revisor.rol != "revisor":
+            raise HTTPException(status_code=404, detail="Revisor no encontrado")
+        if revisor.activo is False:
+            raise HTTPException(status_code=400, detail="El revisor seleccionado está inactivo")
+        caso.revisor_asignado_id = revisor.id
+        descripcion = f"Caso remitido a {revisor.nombre} para revisión"
+
+    estado_actual = caso.estado.value if hasattr(caso.estado, "value") else str(caso.estado)
+    db.add(
+        HistorialEstado(
+            caso_id=caso_id,
+            estado_anterior=estado_actual,
+            estado_nuevo=estado_actual,
+            cambiado_por=cambiado_por,
+            descripcion=descripcion,
+        )
+    )
+
+    await db.commit()
+    await db.refresh(caso)
+    return caso
 
 
 async def cambiar_estado_action(

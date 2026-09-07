@@ -45,6 +45,7 @@ class CasoResponse(CasoBase):
     numero_caso: str
     estado: str
     asistente_asignada_id: int | None = None
+    revisor_asignado_id: int | None = None
     porcentaje_aplicado: float | None = None
     destino_devolucion: str | None = None
     tercero_nombre: str | None = None
@@ -96,3 +97,9 @@ class ActualizarDecisionRequest(BaseModel):
         if valor is not None and valor not in {"estudiante", "icetex"}:
             raise ValueError("El destino de la devolución debe ser 'estudiante' o 'icetex'")
         return valor
+
+
+class RemitirCasoRequest(BaseModel):
+    """Remite el caso a un revisor. Con `revisor_id` nulo se retira la remisión."""
+
+    revisor_id: int | None = None

@@ -37,6 +37,7 @@ class Caso(Base):
     destino_devolucion = Column(String(50), nullable=True)
     estado = Column(SAEnum(EstadoCaso), nullable=False, default=EstadoCaso.RECIBIDO)
     asistente_asignada_id = Column(Integer, ForeignKey("usuarios.id"), nullable=True)
+    revisor_asignado_id = Column(Integer, ForeignKey("usuarios.id"), nullable=True)
 
     # Datos del tercero (opcional)
     tercero_nombre = Column(String(200))

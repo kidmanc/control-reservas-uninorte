@@ -35,6 +35,31 @@ async def get_current_user(
     return user
 
 
+async def get_current_user_optional(
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    db: AsyncSession = Depends(get_db),
+) -> dict | None:
+    """Igual que `get_current_user`, pero devuelve None si no hay token válido.
+
+    Sirve para rutas públicas (seguimiento del estudiante) que el panel
+    también consume con token: si quien llama es revisor, se le aplica
+    su restricción de casos remitidos; si es anónimo, pasa como público.
+    """
+    if not credentials:
+        return None
+
+    payload = verificar_token(credentials.credentials)
+    if not payload:
+        return None
+
+    try:
+        user_id = int(payload.get("sub"))
+    except (TypeError, ValueError):
+        return None
+
+    return await me_controller(db, user_id)
+
+
 @router.post("/login")
 async def login(request: LoginRequest, db: AsyncSession = Depends(get_db)):
     result = await login_controller(db, request.correo, request.contrasena)

@@ -31,6 +31,7 @@ NUEVAS_COLUMNAS_CASOS = {
     "nivel_academico": "VARCHAR(50)",
     "porcentaje_aplicado": "FLOAT",
     "destino_devolucion": "VARCHAR(50)",
+    "revisor_asignado_id": "INTEGER",
 }
 
 
