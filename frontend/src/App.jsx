@@ -1,11 +1,13 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './features/auth/AuthContext';
 import ProtectedRoute from './features/auth/ProtectedRoute';
+import AdminRoute from './features/auth/AdminRoute';
 import FormularioCasoPage from './features/casos/pages/FormularioCasoPage';
 import ListaCasosPage from './features/casos/pages/ListaCasosPage';
 import DetalleCasoPage from './features/casos/pages/DetalleCasoPage';
 import SeguimientoCasoPage from './features/casos/pages/SeguimientoCasoPage';
 import LoginPage from './features/auth/pages/LoginPage';
+import UsuariosPage from './features/usuarios/pages/UsuariosPage';
 
 export default function App() {
   return (
@@ -40,6 +42,14 @@ export default function App() {
               <ProtectedRoute>
                 <FormularioCasoPage />
               </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/panel/usuarios"
+            element={
+              <AdminRoute>
+                <UsuariosPage />
+              </AdminRoute>
             }
           />
 

@@ -16,23 +16,30 @@ async def seed():
         await conn.run_sync(Base.metadata.create_all)
 
     async with async_session() as db:
-        # Verificar si ya existe el usuario
+        # Verificar si ya existe el usuario semilla (tesorero admin)
         result = await db.execute(select(Usuario).where(Usuario.correo == "carolina.mejia@uninorte.edu.co"))
-        existing = result.scalar_one_or_none()
+        semilla = result.scalar_one_or_none()
 
-        if not existing:
+        if not semilla:
             usuario = Usuario(
                 nombre="Carolina Mejía",
                 correo="carolina.mejia@uninorte.edu.co",
                 contrasena_hash=hash_contrasena("password123"),
-                rol="asistente_tesoreria",
+                rol="admin",
                 iniciales="CM",
+                activo=True,
             )
             db.add(usuario)
             await db.commit()
-            print("Usuario semilla creado: carolina.mejia@uninorte.edu.co / password123")
+            print("Tesorero (admin) semilla creado: carolina.mejia@uninorte.edu.co / password123")
         else:
-            print("Usuario ya existe")
+            # Si el semilla ya existía como asistente, promoverlo a admin (transición)
+            if semilla.rol != "admin":
+                semilla.rol = "admin"
+                await db.commit()
+                print("Semilla promovido a admin (tesorero): carolina.mejia@uninorte.edu.co")
+            else:
+                print("Tesorero (admin) semilla ya existe")
 
     await engine.dispose()
 

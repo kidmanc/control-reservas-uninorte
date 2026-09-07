@@ -44,6 +44,9 @@ async def login_action(db: AsyncSession, correo: str, contrasena: str) -> dict |
     if not usuario or not verificar_contrasena(contrasena, usuario.contrasena_hash):
         return None
 
+    if usuario.activo is False:
+        return None
+
     token = crear_token({"sub": str(usuario.id), "rol": usuario.rol})
 
     return {

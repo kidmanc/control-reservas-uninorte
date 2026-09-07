@@ -6,6 +6,7 @@ const NAV_ITEMS = [
   { to: '/panel', label: 'Casos', end: true },
   { to: '/panel/reportes', label: 'Reportes' },
   { to: '/panel/configuracion', label: 'Configuración' },
+  { to: '/panel/usuarios', label: 'Usuarios', adminOnly: true },
 ];
 
 export default function PanelSidebar() {
@@ -27,7 +28,7 @@ export default function PanelSidebar() {
         </div>
       </div>
 
-      {NAV_ITEMS.map((item) => (
+      {NAV_ITEMS.filter((item) => !item.adminOnly || user?.rol === 'admin').map((item) => (
         <NavLink
           key={item.to}
           to={item.to}
