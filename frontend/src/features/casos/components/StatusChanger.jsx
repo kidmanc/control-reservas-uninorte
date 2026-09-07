@@ -7,6 +7,9 @@ export default function StatusChanger({ estadoActual, onCambiar, cambiando, esAd
   const bloqueado = casoEnEstadoFinal || esperaDocumentacion;
   const puedeCambiar = esAdmin || !bloqueado;
 
+  // "En revisión" lo pone el proceso automático a las 24 h: no es opción manual.
+  const opciones = ESTADOS_ORDEN.filter((estado) => estado !== ESTADOS.EN_REVISION);
+
   let hint = null;
   if (casoEnEstadoFinal) {
     hint = esAdmin
@@ -25,7 +28,7 @@ export default function StatusChanger({ estadoActual, onCambiar, cambiando, esAd
         Cambiar estado
       </h3>
       <div className="status-select">
-        {ESTADOS_ORDEN.map((estado) => {
+        {opciones.map((estado) => {
           const esFinal = ESTADOS_FINALES.includes(estado);
           const deshabilitado = cambiando || estado === estadoActual || !puedeCambiar || (soloFinales && !esFinal);
           return (

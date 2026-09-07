@@ -114,13 +114,18 @@ export async function actualizarCasoDecision(numeroCaso, cambios) {
   return getCaso(numeroCaso);
 }
 
-export async function remitirCaso(numeroCaso, revisorId, motivo = null) {
+export async function remitirCaso(numeroCaso, revisorId, motivo = null, veredicto = null) {
   const { db_id } = await getCaso(numeroCaso);
   await request(`/casos/${db_id}/remitir`, {
     method: 'PATCH',
-    body: JSON.stringify({ revisor_id: revisorId, motivo }),
+    body: JSON.stringify({ revisor_id: revisorId, motivo, veredicto }),
   });
   return getCaso(numeroCaso);
+}
+
+export async function listCasosParticipados() {
+  const casos = await request('/casos/participados');
+  return casos.map(normalizarCaso);
 }
 
 export async function obtenerArchivo(casoId, archivoId) {

@@ -18,7 +18,7 @@ async def listar_usuarios_action(db: AsyncSession) -> list[Usuario]:
 
 
 async def listar_destinatarios_action(db: AsyncSession) -> list[Usuario]:
-    """Usuarios activos que pueden recibir un caso (Robin, Centro Médico, JG)."""
+    """Usuarios activos que pueden recibir un caso (revisión, Centro Médico, aprobación)."""
     result = await db.execute(
         select(Usuario)
         .where(Usuario.rol.in_(ROLES_FLUJO), Usuario.activo.is_not(False))

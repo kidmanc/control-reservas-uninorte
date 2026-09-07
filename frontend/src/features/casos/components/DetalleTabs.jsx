@@ -59,16 +59,22 @@ function Trazabilidad({ historial }) {
     <>
       {ordenado.map((h) => {
         const cfg = ESTADO_DOT[h.estado_nuevo];
+        // Si no hubo cambio de estado (remisión, decisión), el título es el
+        // movimiento registrado, no un "cambio de estado".
+        const huboCambio = !h.estado_anterior || h.estado_anterior !== h.estado_nuevo;
+        const titulo = !h.estado_anterior
+          ? 'Caso recibido'
+          : huboCambio
+            ? `Estado cambiado a "${ESTADO_LABEL[h.estado_nuevo]}"`
+            : h.descripcion || 'Actualización del caso';
         return (
           <div className="timeline-item" key={h.id}>
             <div className="timeline-dot" style={{ background: cfg.bg }}>
               {cfg.icon}
             </div>
             <div className="timeline-content">
-              <div className="timeline-title">
-                {h.estado_anterior ? `Estado cambiado a "${ESTADO_LABEL[h.estado_nuevo]}"` : 'Caso recibido'}
-              </div>
-              {h.descripcion && <div className="timeline-desc">{h.descripcion}</div>}
+              <div className="timeline-title">{titulo}</div>
+              {huboCambio && h.descripcion && <div className="timeline-desc">{h.descripcion}</div>}
               <div className="timeline-time">
                 {formatFecha(h.fecha)} · {h.cambiado_por}
               </div>

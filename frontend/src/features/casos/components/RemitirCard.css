@@ -73,3 +73,21 @@
   opacity: 0.45;
   cursor: not-allowed;
 }
+
+.remit-override {
+  margin-top: 12px;
+  border-top: 1px dashed var(--border);
+  padding-top: 10px;
+}
+
+.remit-override summary {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-family: var(--font-display);
+}
+
+.remit-override summary:hover {
+  color: var(--negro);
+}

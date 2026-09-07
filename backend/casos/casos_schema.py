@@ -103,9 +103,10 @@ class ActualizarDecisionRequest(BaseModel):
 class RemitirCasoRequest(BaseModel):
     """Mueve el caso al siguiente paso del flujo.
 
-    Con `revisor_id` nulo el caso vuelve a Tesorería (Mónica). Las devoluciones
-    exigen `motivo` (queda como comentario interno además del historial).
+    Con `revisor_id` nulo el caso vuelve a Tesorería. Las devoluciones exigen
+    `motivo` y `veredicto` (quedan como comentario interno e historial).
     """
 
     revisor_id: int | None = None
     motivo: str | None = None
+    veredicto: str | None = None

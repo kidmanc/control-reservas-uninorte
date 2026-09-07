@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Text, DateTime, Float, ForeignKey, Enum as SAEnum
+from sqlalchemy import Column, Integer, String, Text, DateTime, Float, ForeignKey, UniqueConstraint, Enum as SAEnum
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 import enum
@@ -39,7 +39,7 @@ class Caso(Base):
     asistente_asignada_id = Column(Integer, ForeignKey("usuarios.id"), nullable=True)
     revisor_asignado_id = Column(Integer, ForeignKey("usuarios.id"), nullable=True)
     # Quién tenía el caso antes del tenedor actual (None = estaba en Tesorería).
-    # Sirve para que JG solo pueda devolver a quien se lo envió.
+    # Sirve para que el aprobador solo pueda devolver a quien se lo envió.
     remitido_por_id = Column(Integer, ForeignKey("usuarios.id"), nullable=True)
 
     # Datos del tercero (opcional)
@@ -56,3 +56,20 @@ class Caso(Base):
     comentarios = relationship("Comentario", back_populates="caso", lazy="selectin")
     archivos = relationship("Archivo", back_populates="caso", lazy="selectin")
     historial_estados = relationship("HistorialEstado", back_populates="caso", lazy="selectin")
+
+
+class ParticipacionCaso(Base):
+    """Casos en los que un usuario participó (los tuvo en sus manos).
+
+    Es el "historial" del operador: ya no están en su bandeja principal,
+    pero puede consultarlos en modo lectura.
+    """
+
+    __tablename__ = "caso_participaciones"
+
+    id = Column(Integer, primary_key=True, index=True)
+    caso_id = Column(Integer, ForeignKey("casos.id"), nullable=False, index=True)
+    usuario_id = Column(Integer, ForeignKey("usuarios.id"), nullable=False, index=True)
+    fecha = Column(DateTime(timezone=True), server_default=func.now())
+
+    __table_args__ = (UniqueConstraint("caso_id", "usuario_id"),)

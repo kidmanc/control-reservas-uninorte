@@ -15,6 +15,7 @@ from casos.casos_schema import (
 from casos.casos_controller import (
     crear_caso_controller,
     listar_casos_controller,
+    listar_participados_controller,
     obtener_caso_controller,
     obtener_caso_por_numero_controller,
     cambiar_estado_controller,
@@ -59,6 +60,13 @@ async def listar_casos(db: AsyncSession = Depends(get_db), user: dict = Depends(
     return casos
 
 
+@router.get("/participados", response_model=list[CasoResponse])
+async def listar_participados(db: AsyncSession = Depends(get_db), user: dict = Depends(get_current_user)):
+    """Historial del operador: casos que tuvo en sus manos y ya no tiene."""
+    casos = await listar_participados_controller(db, user)
+    return casos
+
+
 def _bloquear_operador_escritura(user: dict, accion: str):
     """Revisor y Centro Médico consultan y comentan; no cambian estados ni decisiones."""
     if user.get("rol") in {"revisor", "centro_medico"}:
@@ -96,6 +104,7 @@ async def cambiar_estado(caso_id: int, request: CambiarEstadoRequest, db: AsyncS
         cambiado_por=user["nombre"],
         descripcion=request.descripcion,
         rol=user["rol"],
+        actor_id=user["id"],
     )
     if not caso:
         raise HTTPException(status_code=404, detail="Caso no encontrado")
@@ -117,6 +126,7 @@ async def actualizar_decision(
         request.model_dump(exclude_none=True),
         cambiado_por=user["nombre"],
         rol=user["rol"],
+        actor_id=user["id"],
     )
     if not caso:
         raise HTTPException(status_code=404, detail="Caso no encontrado")
@@ -134,13 +144,14 @@ async def remitir_caso(
 
     Tesorería (asistente o admin) opera cualquier paso válido; quien tiene el
     caso en sus manos solo puede dar sus pasos permitidos. El backend impone
-    la tabla del flujo y exige motivo en las devoluciones.
+    la tabla del flujo y exige motivo y veredicto en las devoluciones.
     """
     caso = await remitir_caso_controller(
         db,
         caso_id,
         request.revisor_id,
         request.motivo,
+        request.veredicto,
         actor=user,
     )
     if not caso:

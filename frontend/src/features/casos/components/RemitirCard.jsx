@@ -10,10 +10,17 @@ const ROL_LABEL = {
   aprobador: 'Aprobación final',
 };
 
+// Qué espera Tesorería de quien tiene el caso.
+const ESPERA_POR_ROL = {
+  centro_medico: 'esperando su visto bueno sobre los documentos.',
+  revisor: 'esperando su revisión (enviar a aprobación o devolver con correcciones).',
+  aprobador: 'esperando su aprobación final.',
+};
+
 function pasosValidos(tenedor, destinatarios, caso) {
   const rolTenedor = tenedor?.rol || null;
 
-  // En Tesorería (Mónica): al Centro Médico o a revisión de detalle.
+  // En Tesorería: al Centro Médico o a revisión de detalle.
   if (rolTenedor === null) {
     return destinatarios
       .filter((d) => d.rol === 'revisor' || d.rol === 'centro_medico')
@@ -21,15 +28,29 @@ function pasosValidos(tenedor, destinatarios, caso) {
         revisor_id: d.id,
         etiqueta: `${d.nombre} — ${ROL_LABEL[d.rol] || d.rol}`,
         esDevolucion: false,
+        veredicto: null,
       }));
   }
 
-  // Centro Médico: solo devuelve a Mónica con su visto bueno.
+  // Centro Médico: devuelve con su veredicto (válidos o no válidos).
   if (rolTenedor === 'centro_medico') {
-    return [{ revisor_id: null, etiqueta: 'Devolver a Mónica (Tesorería)', esDevolucion: true }];
+    return [
+      {
+        revisor_id: null,
+        etiqueta: 'Visto bueno: documentos válidos — devolver',
+        esDevolucion: true,
+        veredicto: 'documentos_validos',
+      },
+      {
+        revisor_id: null,
+        etiqueta: 'No validados: documentos inválidos — devolver',
+        esDevolucion: true,
+        veredicto: 'documentos_no_validos',
+      },
+    ];
   }
 
-  // Revisión de detalle (Robin): a aprobación final o de vuelta a Mónica.
+  // Revisión de detalle: a aprobación final o de vuelta con correcciones.
   if (rolTenedor === 'revisor') {
     const adelantes = destinatarios
       .filter((d) => d.rol === 'aprobador')
@@ -37,12 +58,20 @@ function pasosValidos(tenedor, destinatarios, caso) {
         revisor_id: d.id,
         etiqueta: `Enviar a aprobación final (${d.nombre})`,
         esDevolucion: false,
+        veredicto: null,
       }));
-    return [...adelantes, { revisor_id: null, etiqueta: 'Devolver a Mónica (Tesorería)', esDevolucion: true }];
+    return [
+      ...adelantes,
+      {
+        revisor_id: null,
+        etiqueta: 'Devolver con correcciones',
+        esDevolucion: true,
+        veredicto: 'con_correcciones',
+      },
+    ];
   }
 
-  // Aprobador final (JG): solo devuelve a quien se lo envió. Si el remitente
-  // ya no está disponible, se listan los revisores (Tesorería decide).
+  // Aprobador final: solo devuelve a quien se lo envió, con correcciones.
   if (rolTenedor === 'aprobador') {
     const remitente =
       destinatarios.find((d) => d.id === caso.remitido_por_id && d.rol === 'revisor') || null;
@@ -50,8 +79,9 @@ function pasosValidos(tenedor, destinatarios, caso) {
       return [
         {
           revisor_id: remitente.id,
-          etiqueta: `Devolver a ${remitente.nombre} (quien te lo envió)`,
+          etiqueta: `Devolver con correcciones a ${remitente.nombre} (quien te lo envió)`,
           esDevolucion: true,
+          veredicto: 'con_correcciones',
         },
       ];
     }
@@ -59,29 +89,89 @@ function pasosValidos(tenedor, destinatarios, caso) {
       .filter((d) => d.rol === 'revisor')
       .map((d) => ({
         revisor_id: d.id,
-        etiqueta: `Devolver a revisión de detalle (${d.nombre})`,
+        etiqueta: `Devolver con correcciones a ${d.nombre}`,
         esDevolucion: true,
+        veredicto: 'con_correcciones',
       }));
   }
 
   return [];
 }
 
-export default function RemitirCard({ caso, destinatarios, onRemitir, remitiendo, rolActor }) {
+function nombreTenedor(tenedor) {
+  if (!tenedor) return 'Tesorería';
+  return `${tenedor.nombre} (${ROL_LABEL[tenedor.rol] || tenedor.rol})`;
+}
+
+export default function RemitirCard({ caso, destinatarios, onRemitir, remitiendo, actor }) {
   const [indice, setIndice] = useState('');
   const [motivo, setMotivo] = useState('');
+
+  const esTesoreria = actor?.rol === 'admin' || actor?.rol === 'asistente_tesoreria';
+  const esTenedor =
+    caso.revisor_asignado_id == null ? esTesoreria : caso.revisor_asignado_id === actor?.id;
 
   const tenedor = destinatarios.find((d) => d.id === caso.revisor_asignado_id) || null;
   const pasos = pasosValidos(tenedor, destinatarios, caso);
   const paso = indice === '' ? null : pasos[Number(indice)];
   const faltaMotivo = paso?.esDevolucion && !motivo.trim();
-  const esTesoreria = rolActor === 'admin' || rolActor === 'asistente_tesoreria';
 
   function onConfirmar() {
     if (!paso || faltaMotivo) return;
-    onRemitir(paso.revisor_id, paso.esDevolucion ? motivo.trim() : null);
+    onRemitir(paso.revisor_id, paso.esDevolucion ? motivo.trim() : null, paso.veredicto);
     setIndice('');
     setMotivo('');
+  }
+
+  function renderPasos() {
+    if (pasos.length === 0) {
+      return (
+        <p className="empty-hint" style={{ marginTop: 10 }}>
+          {esTesoreria
+            ? 'No hay cuentas disponibles para este paso (falta crear revisión, Centro Médico o aprobación). La tesorera puede crearlas en Gestión de usuarios.'
+            : 'No hay pasos disponibles desde aquí. Pídelo a Tesorería.'}
+        </p>
+      );
+    }
+    return (
+      <>
+        <div className="remit-field">
+          <label>Siguiente paso</label>
+          <select value={indice} disabled={remitiendo} onChange={(e) => setIndice(e.target.value)}>
+            <option value="">Selecciona el siguiente paso</option>
+            {pasos.map((p, i) => (
+              <option key={`${p.revisor_id}-${p.veredicto}-${i}`} value={i}>
+                {p.etiqueta}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {paso?.esDevolucion && (
+          <div className="remit-field">
+            <label>Motivo de la devolución</label>
+            <textarea
+              className="remit-motivo"
+              placeholder="Explica el resultado o qué se debe corregir (obligatorio, queda en el historial)"
+              value={motivo}
+              disabled={remitiendo}
+              onChange={(e) => setMotivo(e.target.value)}
+            />
+          </div>
+        )}
+
+        <div className="remit-actions">
+          <button
+            type="button"
+            className="btn-primary remit-btn"
+            disabled={remitiendo || !paso || faltaMotivo}
+            onClick={onConfirmar}
+          >
+            {remitiendo ? 'Moviendo…' : 'Confirmar paso'}
+          </button>
+        </div>
+      </>
+    );
   }
 
   return (
@@ -92,54 +182,27 @@ export default function RemitirCard({ caso, destinatarios, onRemitir, remitiendo
       </h3>
 
       <p className="empty-hint">
-        En manos de:{' '}
-        <strong>{tenedor ? `${tenedor.nombre} (${ROL_LABEL[tenedor.rol] || tenedor.rol})` : 'Tesorería (Mónica)'}</strong>
+        En manos de: <strong>{nombreTenedor(tenedor)}</strong>
       </p>
 
-      {pasos.length === 0 ? (
-        <p className="empty-hint" style={{ marginTop: 10 }}>
-          {esTesoreria
-            ? 'No hay cuentas disponibles para este paso (falta crear revisor, Centro Médico o aprobador). La tesorera puede crearlas en Gestión de usuarios.'
-            : 'No hay pasos disponibles desde aquí. Pídelo a Tesorería.'}
-        </p>
-      ) : (
+      {esTenedor && renderPasos()}
+
+      {!esTenedor && esTesoreria && tenedor && (
         <>
-          <div className="remit-field">
-            <label>Siguiente paso</label>
-            <select value={indice} disabled={remitiendo} onChange={(e) => setIndice(e.target.value)}>
-              <option value="">Selecciona el siguiente paso</option>
-              {pasos.map((p, i) => (
-                <option key={`${p.revisor_id}-${i}`} value={i}>
-                  {p.etiqueta}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {paso?.esDevolucion && (
-            <div className="remit-field">
-              <label>Motivo de la devolución</label>
-              <textarea
-                className="remit-motivo"
-                placeholder="Explica qué se debe corregir (obligatorio, queda en el historial)"
-                value={motivo}
-                disabled={remitiendo}
-                onChange={(e) => setMotivo(e.target.value)}
-              />
-            </div>
-          )}
-
-          <div className="remit-actions">
-            <button
-              type="button"
-              className="btn-primary remit-btn"
-              disabled={remitiendo || !paso || faltaMotivo}
-              onClick={onConfirmar}
-            >
-              {remitiendo ? 'Moviendo…' : 'Confirmar paso'}
-            </button>
-          </div>
+          <p className="empty-hint" style={{ marginTop: 8 }}>
+            Está {ESPERA_POR_ROL[tenedor.rol] || 'en revisión.'}
+          </p>
+          <details className="remit-override">
+            <summary>Actuar como Tesorería (override)</summary>
+            {renderPasos()}
+          </details>
         </>
+      )}
+
+      {!esTenedor && !esTesoreria && (
+        <p className="empty-hint" style={{ marginTop: 8 }}>
+          Ya participaste en este caso; ahora está en manos de {nombreTenedor(tenedor)}.
+        </p>
       )}
     </div>
   );

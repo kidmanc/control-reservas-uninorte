@@ -15,7 +15,7 @@ export default function DecisionCard({ caso, onCambiar, guardando, soloLectura =
       </h3>
       <p className="empty-hint">Porcentaje aplicado para {esDevolucion ? 'la devolución' : 'la reserva de matrícula'}.</p>
       {soloLectura && (
-        <p className="empty-hint">Los porcentajes los confirma el aprobador final (JG) al aprobar el caso.</p>
+        <p className="empty-hint">Los porcentajes los confirma el aprobador final al aprobar el caso.</p>
       )}
 
       <div className="decision-select">

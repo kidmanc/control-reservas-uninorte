@@ -2,23 +2,36 @@ from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi import HTTPException
 
-from casos.casos_model import Caso, EstadoCaso, TipoSolicitud
+from casos.casos_model import Caso, EstadoCaso, TipoSolicitud, ParticipacionCaso
 from usuarios.usuarios_model import Usuario
 from comentarios.comentarios_model import Comentario
 from archivos.archivos_model import Archivo
 from archivos.storage import eliminar_archivos, guardar_archivo
 from historial.historial_model import HistorialEstado
 
-# Roles con visibilidad restringida: solo ven los casos que tienen asignados.
+# Roles con visibilidad restringida: solo ven sus casos asignados y su historial.
 ROLES_RESTRINGIDOS = {"revisor", "centro_medico", "aprobador"}
 
 # Tabla de pasos válidos del flujo: rol del tenedor actual -> roles destino.
-# None = el caso está en Tesorería (Mónica).
+# None = el caso está en Tesorería.
 PASOS_FLUJO = {
     None: {"revisor", "centro_medico"},
     "centro_medico": {None},
     "revisor": {"aprobador", None},
     "aprobador": {"revisor"},
+}
+
+# Resultado obligatorio al devolver, según quién devuelve.
+VEREDICTOS_DEVOLUCION = {
+    "centro_medico": {"documentos_validos", "documentos_no_validos"},
+    "revisor": {"con_correcciones"},
+    "aprobador": {"con_correcciones"},
+}
+
+VEREDICTO_LABEL = {
+    "documentos_validos": "visto bueno: documentos válidos",
+    "documentos_no_validos": "no validados: documentos inválidos",
+    "con_correcciones": "devuelto con correcciones",
 }
 
 
@@ -137,16 +150,58 @@ def _restringido_sin_acceso(caso: Caso, user: dict | None) -> bool:
 
 
 async def exigir_acceso_caso_action(db: AsyncSession, caso_id: int, user: dict | None) -> Caso:
-    """Devuelve el caso o lanza 404/403 (revisor sin remisión)."""
+    """Devuelve el caso o lanza 404/403.
+
+    Quien opera en el flujo puede ver sus casos asignados y su historial
+    (casos que ya tuvo en sus manos, en modo lectura).
+    """
     caso = await obtener_caso_action(db, caso_id)
     if not caso:
         raise HTTPException(status_code=404, detail="Caso no encontrado")
     if _restringido_sin_acceso(caso, user):
+        participa = await db.execute(
+            select(ParticipacionCaso).where(
+                ParticipacionCaso.caso_id == caso_id,
+                ParticipacionCaso.usuario_id == user.get("id"),
+            )
+        )
+        if not participa.scalar_one_or_none():
+            raise HTTPException(
+                status_code=403,
+                detail="Este caso no está en tus manos ni en tu historial.",
+            )
+    return caso
+
+
+async def exigir_tenedor_caso_action(db: AsyncSession, caso_id: int, user: dict | None) -> Caso:
+    """Como exigir_acceso, pero solo el tenedor actual (para escribir)."""
+    caso = await obtener_caso_action(db, caso_id)
+    if not caso:
+        raise HTTPException(status_code=404, detail="Caso no encontrado")
+    if (
+        user
+        and user.get("rol") in ROLES_RESTRINGIDOS
+        and caso.revisor_asignado_id != user.get("id")
+    ):
         raise HTTPException(
             status_code=403,
-            detail="Este caso no lo tienes asignado. Solo puedes ver los casos en tus manos.",
+            detail="Solo puedes actuar sobre los casos que tienes en tus manos.",
         )
     return caso
+
+
+async def listar_participados_action(db: AsyncSession, user: dict) -> list[Caso]:
+    """Historial del operador: casos que tuvo en sus manos y ya no tiene."""
+    result = await db.execute(
+        select(Caso)
+        .join(ParticipacionCaso, ParticipacionCaso.caso_id == Caso.id)
+        .where(
+            ParticipacionCaso.usuario_id == user.get("id"),
+            Caso.revisor_asignado_id != user.get("id"),
+        )
+        .order_by(ParticipacionCaso.fecha.desc())
+    )
+    return list(result.scalars().all())
 
 
 async def exigir_acceso_caso_por_numero_action(db: AsyncSession, numero: str, user: dict | None) -> Caso:
@@ -154,10 +209,17 @@ async def exigir_acceso_caso_por_numero_action(db: AsyncSession, numero: str, us
     if not caso:
         raise HTTPException(status_code=404, detail="Caso no encontrado")
     if _restringido_sin_acceso(caso, user):
-        raise HTTPException(
-            status_code=403,
-            detail="Este caso no lo tienes asignado. Solo puedes ver los casos en tus manos.",
+        participa = await db.execute(
+            select(ParticipacionCaso).where(
+                ParticipacionCaso.caso_id == caso.id,
+                ParticipacionCaso.usuario_id == user.get("id"),
+            )
         )
+        if not participa.scalar_one_or_none():
+            raise HTTPException(
+                status_code=403,
+                detail="Este caso no está en tus manos ni en tu historial.",
+            )
     return caso
 
 
@@ -166,13 +228,14 @@ async def remitir_caso_action(
     caso_id: int,
     revisor_id: int | None,
     motivo: str | None,
+    veredicto: str | None,
     actor: dict,
 ) -> Caso | None:
     """Mueve el caso al siguiente paso del flujo (tenedor único).
 
-    `revisor_id` None = el caso vuelve a Tesorería (Mónica). Las devoluciones
-    (volver a Mónica o JG -> Robin) exigen motivo y quedan como comentario
-    interno además del historial.
+    `revisor_id` None = el caso vuelve a Tesorería. Las devoluciones exigen
+    `motivo` y `veredicto` (el resultado: visto bueno, no validado o con
+    correcciones) y quedan como comentario interno además del historial.
     """
     caso = await obtener_caso_action(db, caso_id)
     if not caso:
@@ -188,7 +251,7 @@ async def remitir_caso_action(
 
     if revisor_id is None:
         rol_destino = None
-        destino_nombre = "Tesorería (Mónica)"
+        destino_nombre = "Tesorería"
     else:
         destino = await db.get(Usuario, revisor_id)
         if not destino or destino.rol not in ROLES_RESTRINGIDOS:
@@ -213,9 +276,9 @@ async def remitir_caso_action(
             detail="Ese paso no es válido en el flujo del caso.",
         )
 
-    # JG solo devuelve a quien se lo envió: la cadena Mónica -> Robin -> JG ->
-    # Robin queda garantizada aunque haya varios revisores. Tesorería conserva
-    # override para casos borde (ej. remitente inactivo).
+    # El aprobador solo devuelve a quien se lo envió: la cadena Tesorería ->
+    # revisor -> aprobador -> revisor queda garantizada aunque haya varios
+    # revisores. Tesorería conserva override para casos borde.
     if rol_tenedor == "aprobador" and rol_destino == "revisor" and rol_actor == "aprobador":
         if revisor_id != caso.remitido_por_id:
             raise HTTPException(
@@ -225,16 +288,24 @@ async def remitir_caso_action(
 
     es_devolucion = rol_destino is None or (rol_tenedor == "aprobador" and rol_destino == "revisor")
     motivo_limpio = (motivo or "").strip()
-    if es_devolucion and not motivo_limpio:
-        raise HTTPException(
-            status_code=400,
-            detail="Indica el motivo de la devolución: es obligatorio para devolver un caso.",
-        )
+    veredicto_limpio = (veredicto or "").strip()
+    if es_devolucion:
+        if veredicto_limpio not in VEREDICTOS_DEVOLUCION.get(rol_tenedor, set()):
+            raise HTTPException(
+                status_code=400,
+                detail="Indica el resultado de la revisión: es obligatorio al devolver un caso.",
+            )
+        if not motivo_limpio:
+            raise HTTPException(
+                status_code=400,
+                detail="Indica el motivo de la devolución: es obligatorio para devolver un caso.",
+            )
+    etiqueta_veredicto = VEREDICTO_LABEL.get(veredicto_limpio, "")
 
     caso.remitido_por_id = caso.revisor_asignado_id
     caso.revisor_asignado_id = revisor_id
     descripcion = (
-        f"Caso devuelto a {destino_nombre}: {motivo_limpio}"
+        f"Caso devuelto a {destino_nombre} — {etiqueta_veredicto}: {motivo_limpio}"
         if es_devolucion
         else f"Caso remitido a {destino_nombre} para revisión"
     )
@@ -256,10 +327,23 @@ async def remitir_caso_action(
             Comentario(
                 caso_id=caso_id,
                 autor=actor.get("nombre", "Tesorería"),
-                texto=motivo_limpio,
+                texto=f"{etiqueta_veredicto}: {motivo_limpio}",
                 visible_para_estudiante=False,
             )
         )
+
+    # Quien entrega y quien recibe quedan en el historial de participación.
+    for uid in {actor.get("id"), revisor_id}:
+        if uid is None:
+            continue
+        existe = await db.execute(
+            select(ParticipacionCaso).where(
+                ParticipacionCaso.caso_id == caso_id,
+                ParticipacionCaso.usuario_id == uid,
+            )
+        )
+        if not existe.scalar_one_or_none():
+            db.add(ParticipacionCaso(caso_id=caso_id, usuario_id=uid))
 
     await db.commit()
     await db.refresh(caso)
@@ -273,6 +357,7 @@ async def cambiar_estado_action(
     cambiado_por: str,
     descripcion: str | None = None,
     rol: str = "asistente_tesoreria",
+    actor_id: int | None = None,
 ) -> Caso | None:
     caso = await obtener_caso_action(db, caso_id)
     if not caso:
@@ -283,6 +368,13 @@ async def cambiar_estado_action(
         estado_valido = EstadoCaso(nuevo_estado)
     except ValueError:
         raise HTTPException(status_code=400, detail=f"Estado inválido: {nuevo_estado}")
+
+    # Quien opera en el flujo solo actúa sobre sus casos en mano.
+    if rol in ROLES_RESTRINGIDOS and actor_id is not None and caso.revisor_asignado_id != actor_id:
+        raise HTTPException(
+            status_code=403,
+            detail="Solo puedes cambiar el estado de los casos que tienes en tus manos.",
+        )
 
     es_admin = rol == "admin"
     es_aprobador = rol == "aprobador"
@@ -302,11 +394,11 @@ async def cambiar_estado_action(
             detail="Como aprobador final solo puedes registrar la aprobación o el rechazo del caso.",
         )
 
-    # La asistente no fija estados finales: la aprobación la registra JG.
+    # La asistente no fija estados finales: la aprobación la registra el aprobador final.
     if es_asistente and estado_valido in (EstadoCaso.APROBADO, EstadoCaso.RECHAZADO):
         raise HTTPException(
             status_code=403,
-            detail="La aprobación o el rechazo final los registra el aprobador (JG). Remite el caso para continuar el flujo.",
+            detail="La aprobación o el rechazo final los registra el aprobador final. Remite el caso para continuar el flujo.",
         )
 
     if not es_admin:
@@ -361,11 +453,18 @@ async def actualizar_decision_action(
     data: dict,
     cambiado_por: str,
     rol: str = "asistente_tesoreria",
+    actor_id: int | None = None,
 ) -> Caso | None:
     """Actualiza nivel académico, porcentaje aplicado y/o destino de devolución."""
     caso = await obtener_caso_action(db, caso_id)
     if not caso:
         return None
+
+    if rol in ROLES_RESTRINGIDOS and actor_id is not None and caso.revisor_asignado_id != actor_id:
+        raise HTTPException(
+            status_code=403,
+            detail="Solo puedes registrar decisiones en los casos que tienes en tus manos.",
+        )
 
     if rol in ("revisor", "centro_medico"):
         raise HTTPException(
@@ -378,7 +477,7 @@ async def actualizar_decision_action(
     if rol == "asistente_tesoreria" and (porcentaje is not None or destino is not None):
         raise HTTPException(
             status_code=403,
-            detail="Los porcentajes y el destino los confirma el aprobador final (JG).",
+            detail="Los porcentajes y el destino los confirma el aprobador final.",
         )
 
     tipo = caso.tipo_solicitud

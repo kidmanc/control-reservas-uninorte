@@ -5,7 +5,7 @@ import EstadoBadge from '../../../components/ui/EstadoBadge';
 import TipoTag from '../../../components/ui/TipoTag';
 import { IconPlus, IconSearch, IconUsers } from '../../../components/ui/icons';
 import { useAuth } from '../../auth/AuthContext';
-import { listCasos } from '../api/casosApi';
+import { listCasos, listCasosParticipados } from '../api/casosApi';
 import { ESTADOS, ESTADOS_ORDEN, ESTADO_LABEL, TIPOS_SOLICITUD, TIPO_SOLICITUD_TAG_LABEL } from '../constants';
 import './ListaCasosPage.css';
 
@@ -28,13 +28,17 @@ export default function ListaCasosPage() {
   const [filtroTipo, setFiltroTipo] = useState(null);
   const [soloTerceros, setSoloTerceros] = useState(false);
   const [busqueda, setBusqueda] = useState('');
+  const [participados, setParticipados] = useState([]);
 
   useEffect(() => {
     let vigente = true;
-    listCasos()
-      .then((data) => {
+    const principal = listCasos();
+    const historial = esOperador ? listCasosParticipados() : Promise.resolve([]);
+    Promise.all([principal, historial])
+      .then(([data, hist]) => {
         if (vigente) {
           setCasos(data);
+          setParticipados(hist);
           setCargando(false);
         }
       })
@@ -47,7 +51,7 @@ export default function ListaCasosPage() {
     return () => {
       vigente = false;
     };
-  }, []);
+  }, [esOperador]);
 
   const conteos = useMemo(() => {
     const base = { total: casos.length };
@@ -172,34 +176,66 @@ export default function ListaCasosPage() {
 
           {!cargando &&
             casosFiltrados.map((caso) => (
-              <button className="case-row" key={caso.id} onClick={() => navigate(`/panel/casos/${caso.id}`)}>
-                <span className="case-code">{caso.id}</span>
-                <div className="case-student">
-                  {caso.nombre_completo}
-                  <div className="meta">{caso.codigo_estudiantil}</div>
-                </div>
-                <TipoTag tipo={caso.tipo_solicitud} />
-                <span className="case-meta-text">{caso.programa_academico}</span>
-                <span className="case-meta-text">{caso.periodo_academico}</span>
-                <EstadoBadge estado={caso.estado} />
-                {caso.asistente_asignada ? (
-                  <div className="avatar-mini">{caso.asistente_asignada.iniciales}</div>
-                ) : (
-                  <div className="avatar-mini" style={{ background: '#f0ece3', color: '#b3ada2' }}>
-                    —
-                  </div>
-                )}
-                {caso.tercero ? (
-                  <div className="third-party-flag" title="Diligenciado por un tercero">
-                    <IconUsers />
-                  </div>
-                ) : (
-                  <span />
-                )}
-              </button>
+              <FilaCaso key={caso.id} caso={caso} onAbrir={(id) => navigate(`/panel/casos/${id}`)} />
             ))}
         </div>
+
+        {esOperador && !cargando && !errorCarga && (
+          <div className="historial-section">
+            <h2 className="historial-title">Historial — casos que ya revisaste ({participados.length})</h2>
+            <p className="empty-hint">Solo lectura: ya no están en tus manos, pero quedan en tu historial.</p>
+            {participados.length === 0 ? (
+              <div className="empty-row">Todavía no has devuelto ningún caso.</div>
+            ) : (
+              <div className="case-table">
+                <div className="case-row header-row">
+                  <span>Caso</span>
+                  <span>Estudiante</span>
+                  <span>Tipo</span>
+                  <span>Programa</span>
+                  <span>Periodo</span>
+                  <span>Estado</span>
+                  <span>Asignado</span>
+                  <span></span>
+                </div>
+                {participados.map((caso) => (
+                  <FilaCaso key={caso.id} caso={caso} onAbrir={(id) => navigate(`/panel/casos/${id}`)} />
+                ))}
+              </div>
+            )}
+          </div>
+        )}
       </main>
     </div>
+  );
+}
+
+function FilaCaso({ caso, onAbrir }) {
+  return (
+    <button className="case-row" onClick={() => onAbrir(caso.id)}>
+      <span className="case-code">{caso.id}</span>
+      <div className="case-student">
+        {caso.nombre_completo}
+        <div className="meta">{caso.codigo_estudiantil}</div>
+      </div>
+      <TipoTag tipo={caso.tipo_solicitud} />
+      <span className="case-meta-text">{caso.programa_academico}</span>
+      <span className="case-meta-text">{caso.periodo_academico}</span>
+      <EstadoBadge estado={caso.estado} />
+      {caso.asistente_asignada ? (
+        <div className="avatar-mini">{caso.asistente_asignada.iniciales}</div>
+      ) : (
+        <div className="avatar-mini" style={{ background: '#f0ece3', color: '#b3ada2' }}>
+          —
+        </div>
+      )}
+      {caso.tercero ? (
+        <div className="third-party-flag" title="Diligenciado por un tercero">
+          <IconUsers />
+        </div>
+      ) : (
+        <span />
+      )}
+    </button>
   );
 }

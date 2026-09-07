@@ -87,11 +87,11 @@ export default function DetalleCasoPage() {
     }
   }
 
-  async function onRemitir(revisorId, motivo) {
+  async function onRemitir(revisorId, motivo, veredicto) {
     setRemitiendo(true);
     setErrorAccion(null);
     try {
-      const actualizado = await remitirCaso(id, revisorId, motivo);
+      const actualizado = await remitirCaso(id, revisorId, motivo, veredicto);
       setCaso(actualizado);
     } catch (err) {
       setErrorAccion(err.message || 'No se pudo mover el caso.');
@@ -177,6 +177,14 @@ export default function DetalleCasoPage() {
   const esAsistente = user?.rol === 'asistente_tesoreria';
   const esAprobador = user?.rol === 'aprobador';
   const sinEstadoNiDecision = user?.rol === 'revisor' || user?.rol === 'centro_medico';
+
+  // Quien opera en el flujo solo comenta sus casos en mano (el historial es lectura).
+  const esTenedor =
+    caso.revisor_asignado_id == null
+      ? user?.rol === 'admin' || user?.rol === 'asistente_tesoreria'
+      : caso.revisor_asignado_id === user?.id;
+  const esRestringido = ['revisor', 'centro_medico', 'aprobador'].includes(user?.rol);
+  const puedeComentar = !esRestringido || esTenedor;
 
   const HINT_POR_ROL = {
     revisor: 'Este caso está en tus manos para revisión de detalle. Revísalo y envíalo a aprobación final o devuélvelo a Mónica con el motivo.',
@@ -288,7 +296,7 @@ export default function DetalleCasoPage() {
           {/* Columna derecha */}
             <div>
             {errorAccion && <div className="form-error" style={{ marginBottom: 16 }}>{errorAccion}</div>}
-            {HINT_POR_ROL[user?.rol] && (
+            {esTenedor && HINT_POR_ROL[user?.rol] && (
               <div className="sidebar-card">
                 <p className="empty-hint" style={{ marginBottom: 0 }}>
                   {HINT_POR_ROL[user?.rol]}
@@ -300,7 +308,7 @@ export default function DetalleCasoPage() {
               destinatarios={destinatarios}
               onRemitir={onRemitir}
               remitiendo={remitiendo}
-              rolActor={user?.rol}
+              actor={user}
             />
             {!sinEstadoNiDecision && (
               <StatusChanger
@@ -324,7 +332,9 @@ export default function DetalleCasoPage() {
               onVerArchivo={onVerArchivo}
               archivoAbriendoId={archivoAbriendoId}
             />
-            <CommentComposer comentarios={caso.comentarios} onAgregar={onAgregarComentario} enviando={enviandoComentario} />
+            {puedeComentar && (
+              <CommentComposer comentarios={caso.comentarios} onAgregar={onAgregarComentario} enviando={enviandoComentario} />
+            )}
           </div>
         </div>
       </main>
