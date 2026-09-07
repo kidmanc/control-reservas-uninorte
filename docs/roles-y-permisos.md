@@ -9,7 +9,7 @@ El caso siempre está **en manos de una sola persona**. Los pasos válidos son:
 1. **Tesorería (asistente)** recibe, revisa y liquida → envía al **Centro Médico** (si requiere validación médica) o a **Revisión de detalle**.
 2. **Centro Médico** valida los documentos → devuelve a Tesorería con su veredicto.
 3. **Revisión de detalle** revisa → envía a **Aprobación final** o devuelve a Tesorería con correcciones.
-4. **Aprobación final** aprueba/rechaza (fija porcentaje y destino) o devuelve a Revisión de detalle con correcciones. Al aprobarse o rechazarse, el caso **vuelve a Tesorería**: sale de la bandeja del aprobador y queda en los historiales.
+4. **Aprobación final** aprueba/rechaza (fija porcentaje y destino) o devuelve a Revisión de detalle con correcciones. Al aprobarse o rechazarse, el caso **vuelve a Tesorería**: sale de la bandeja del aprobador y queda en los historiales. Al rechazar, el porcentaje queda en **0% automáticamente**.
 
 ## Qué puede hacer cada rol
 

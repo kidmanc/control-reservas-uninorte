@@ -446,6 +446,15 @@ async def cambiar_estado_action(
                 detail="Indica el destino de la devolución antes de aprobar el caso.",
             )
 
+    # Al rechazar, el porcentaje queda en 0% automáticamente.
+    if estado_valido == EstadoCaso.RECHAZADO:
+        caso.porcentaje_aplicado = 0.0
+        nota_rechazo = "Porcentaje: 0% (automático por rechazo)."
+        if descripcion and "automático por rechazo" not in descripcion:
+            descripcion = f"{descripcion} | {nota_rechazo}"
+        elif not descripcion:
+            descripcion = nota_rechazo
+
     estado_anterior = caso.estado
     caso.estado = estado_valido
 
