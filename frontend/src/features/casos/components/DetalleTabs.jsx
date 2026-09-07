@@ -3,7 +3,7 @@ import { ESTADO_LABEL, ESTADOS } from '../constants';
 import { IconWarning, IconReceived, IconCheckCircle, IconFile } from '../../../components/ui/icons';
 
 function formatFecha(iso) {
-  return new Date(iso).toLocaleString('es-CO', { day: 'numeric', month: 'long', hour: 'numeric', minute: '2-digit' });
+  return new Date(iso).toLocaleString('es-CO', { timeZone: 'America/Bogota', day: 'numeric', month: 'long', hour: 'numeric', minute: '2-digit' });
 }
 
 const ESTADO_DOT = {

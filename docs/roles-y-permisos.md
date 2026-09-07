@@ -15,12 +15,12 @@ El caso siempre está **en manos de una sola persona**. Los pasos válidos son:
 
 | Rol | Ve | Puede hacer | NO puede |
 |---|---|---|---|
-| **Tesorero (admin)** | Todos los casos | Gestionar usuarios; corregir estados finales; operar cualquier paso válido del recorrido | No opera el flujo día a día (solo override y correcciones) |
-| **Asistente de Tesorería** | Todos los casos | Cambiar estados **no finales**; editar nivel académico; mover el recorrido (enviar a Centro Médico o a Revisión) | Fijar aprobado/rechazado; fijar porcentajes o destino; sacar casos de `falta_documentacion` o de estados finales |
-| **Revisor de detalle** | Solo sus casos en mano + su historial (lectura) | Comentar sus casos; enviar a Aprobación final; devolver a Tesorería **con correcciones** (motivo obligatorio) | Cambiar estados; registrar decisiones; ver casos ajenos |
-| **Centro Médico** | Solo sus casos en mano + su historial (lectura) | Comentar sus casos; devolver a Tesorería con veredicto: **documentos válidos** o **documentos inválidos** (motivo obligatorio) | Cambiar estados; registrar decisiones; enviar a otro paso |
-| **Aprobador final** | Solo sus casos en mano + su historial (lectura) | Fijar **aprobado/rechazado**; fijar porcentaje y destino; devolver **a quien se lo envió** con correcciones (motivo obligatorio) | Cambiar estados no finales; ver casos ajenos |
-| **Estudiante / tercero** (canal público, sin login) | Solo su caso con el enlace | Comentar; adjuntar documentos cuando se le piden | Todo lo demás |
+| **Tesorero (admin)** | Todos los casos | Gestionar usuarios; corregir estados finales; operar cualquier paso válido del recorrido (override) | No opera el flujo día a día |
+| **Asistente de Tesorería** | Todos los casos | En casos en Tesorería: cambiar estados **no finales**; editar nivel académico; enviar a Centro Médico o a Revisión | Tocar casos en manos de otro paso; fijar aprobado/rechazado; fijar porcentajes o destino; sacar casos de `falta_documentacion` o de estados finales |
+| **Revisor de detalle** | Sus casos en mano + los que ya revisó (una sola lista) | Comentar sus casos; enviar a Aprobación final; devolver a Tesorería **con correcciones** (motivo obligatorio) | Cambiar estados; registrar decisiones; ver casos ajenos |
+| **Centro Médico** | Sus casos en mano + los que ya revisó (una sola lista) | Comentar sus casos; devolver a Tesorería con veredicto: **documentos válidos** o **documentos inválidos** (motivo obligatorio) | Cambiar estados; registrar decisiones; enviar a otro paso |
+| **Aprobador final** | Sus casos en mano + los que ya revisó (una sola lista) | Fijar **aprobado/rechazado** (exige porcentaje y, si es devolución, destino); fijar porcentaje y destino; devolver **a quien se lo envió** con correcciones (motivo obligatorio) | Cambiar estados no finales; aprobar sin porcentaje; ver casos ajenos |
+| **Estudiante / tercero** (canal público, sin login) | Solo su caso con el enlace | Comentar; adjuntar documentos cuando se le piden; ver su trazabilidad con hora de Colombia | Todo lo demás |
 
 ## Devoluciones
 
@@ -38,6 +38,7 @@ El caso siempre está **en manos de una sola persona**. Los pasos válidos son:
 
 ## Notas
 
-- El **historial** de cada operador registra los casos que pasaron por sus manos (lectura). Los filtros de estado, tipo y búsqueda aplican a bandeja e historial a la vez.
+- Cada operador ve **una sola lista**: sus casos en mano primero y luego los que ya revisó (la columna Asignado muestra quién tiene cada caso). Los filtros aplican a todo.
 - Los casos movidos antes de existir el historial se registran automáticamente al iniciar el backend (backfill idempotente).
+- Todas las fechas se muestran en **hora de Colombia** (el backend emite UTC y el frontend convierte).
 - Cuentas de ejemplo para desarrollo (contraseña `password123`): se crean con `python seed.py` y la tesorera las reemplaza por las reales en Gestión de usuarios.

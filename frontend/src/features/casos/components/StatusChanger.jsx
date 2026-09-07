@@ -1,7 +1,7 @@
 import { ESTADOS_ORDEN, ESTADO_LABEL, ESTADOS_FINALES, ESTADOS } from '../constants';
 import { IconCheck } from '../../../components/ui/icons';
 
-export default function StatusChanger({ estadoActual, onCambiar, cambiando, esAdmin = false, soloFinales = false }) {
+export default function StatusChanger({ estadoActual, onCambiar, cambiando, esAdmin = false, soloFinales = false, puedeAprobar = true }) {
   const casoEnEstadoFinal = ESTADOS_FINALES.includes(estadoActual);
   const esperaDocumentacion = estadoActual === ESTADOS.FALTA_DOCUMENTACION;
   const bloqueado = casoEnEstadoFinal || esperaDocumentacion;
@@ -30,7 +30,13 @@ export default function StatusChanger({ estadoActual, onCambiar, cambiando, esAd
       <div className="status-select">
         {opciones.map((estado) => {
           const esFinal = ESTADOS_FINALES.includes(estado);
-          const deshabilitado = cambiando || estado === estadoActual || !puedeCambiar || (soloFinales && !esFinal);
+          const esAprobado = estado === ESTADOS.APROBADO;
+          const deshabilitado =
+            cambiando ||
+            estado === estadoActual ||
+            !puedeCambiar ||
+            (soloFinales && !esFinal) ||
+            (esAprobado && !puedeAprobar);
           return (
             <button
               key={estado}
@@ -38,7 +44,7 @@ export default function StatusChanger({ estadoActual, onCambiar, cambiando, esAd
               className={`status-option${estado === estadoActual ? ' selected' : ''}`}
               disabled={deshabilitado}
               onClick={() => onCambiar(estado)}
-              title={!puedeCambiar ? hint : undefined}
+              title={!puedeCambiar ? hint : esAprobado && !puedeAprobar ? 'Fija el porcentaje (y el destino si es devolución) en la decisión antes de aprobar.' : undefined}
             >
               <span className="radio" />
               {ESTADO_LABEL[estado]}

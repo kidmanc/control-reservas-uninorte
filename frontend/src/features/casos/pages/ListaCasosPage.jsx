@@ -29,7 +29,6 @@ export default function ListaCasosPage() {
   const [filtroTipo, setFiltroTipo] = useState(null);
   const [soloTerceros, setSoloTerceros] = useState(false);
   const [busqueda, setBusqueda] = useState('');
-  const [participados, setParticipados] = useState([]);
   const [destinatarios, setDestinatarios] = useState([]);
 
   // Mapa id -> usuario para mostrar quién tiene cada caso (columna Asignado).
@@ -41,13 +40,14 @@ export default function ListaCasosPage() {
   useEffect(() => {
     let vigente = true;
     const principal = listCasos();
-    const historial = esOperador ? listCasosParticipados() : Promise.resolve([]);
+    // Para quien opera en el flujo, la bandeja incluye su historial (casos que
+    // ya tuvo en sus manos): todo vive en una sola lista con los filtros.
+    const historial = esOperador ? listCasosParticipados().catch(() => []) : Promise.resolve([]);
     const usuarios = listarDestinatarios().catch(() => []);
     Promise.all([principal, historial, usuarios])
       .then(([data, hist, dirs]) => {
         if (vigente) {
-          setCasos(data);
-          setParticipados(hist);
+          setCasos(esOperador ? [...data, ...hist] : data);
           setDestinatarios(dirs);
           setCargando(false);
         }
@@ -64,14 +64,12 @@ export default function ListaCasosPage() {
   }, [esOperador]);
 
   const conteos = useMemo(() => {
-    // Para quien opera en el flujo, los conteos cubren bandeja + historial.
-    const base = esOperador ? [...casos, ...participados] : casos;
-    const total = { total: base.length };
+    const base = { total: casos.length };
     for (const estado of ESTADOS_ORDEN) {
-      total[estado] = base.filter((c) => c.estado === estado).length;
+      base[estado] = casos.filter((c) => c.estado === estado).length;
     }
-    return total;
-  }, [casos, participados, esOperador]);
+    return base;
+  }, [casos]);
 
   function pasaFiltros(c) {
     if (filtroEstado && c.estado !== filtroEstado) return false;
@@ -95,12 +93,6 @@ export default function ListaCasosPage() {
     [casos, filtroEstado, filtroTipo, soloTerceros, busqueda],
   );
 
-  const participadosFiltrados = useMemo(
-    () => participados.filter(pasaFiltros),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [participados, filtroEstado, filtroTipo, soloTerceros, busqueda],
-  );
-
   return (
     <div className="panel-layout">
       <PanelSidebar />
@@ -110,7 +102,7 @@ export default function ListaCasosPage() {
             <h1>Casos especiales</h1>
             <div className="sub">
               {esOperador
-                ? 'Solo ves los casos que tienes en tus manos para revisión'
+                ? 'Tus casos en mano y los que ya revisaste'
                 : 'Reservas de matrícula por causa especial y devoluciones — gestión y trazabilidad'}
             </div>
           </div>
@@ -206,41 +198,6 @@ export default function ListaCasosPage() {
               />
             ))}
         </div>
-
-        {esOperador && !cargando && !errorCarga && (
-          <div className="historial-section">
-            <h2 className="historial-title">Historial: casos en los que participaste ({participadosFiltrados.length})</h2>
-            <p className="empty-hint">Solo lectura: ya no están en tus manos, pero quedan en tu historial.</p>
-            {participadosFiltrados.length === 0 ? (
-              <div className="empty-row">
-                {participados.length === 0
-                  ? 'Aún no tienes casos en tu historial. Aparecerán aquí los casos que pasen por tus manos.'
-                  : 'Ningún caso del historial coincide con estos filtros.'}
-              </div>
-            ) : (
-              <div className="case-table">
-                <div className="case-row header-row">
-                  <span>Caso</span>
-                  <span>Estudiante</span>
-                  <span>Tipo</span>
-                  <span>Programa</span>
-                  <span>Periodo</span>
-                  <span>Estado</span>
-                  <span>Asignado</span>
-                  <span></span>
-                </div>
-                {participadosFiltrados.map((caso) => (
-                  <FilaCaso
-                    key={caso.id}
-                    caso={caso}
-                    tenedor={mapaDestinatarios[caso.revisor_asignado_id]}
-                    onAbrir={(id) => navigate(`/panel/casos/${id}`)}
-                  />
-                ))}
-              </div>
-            )}
-          </div>
-        )}
       </main>
     </div>
   );

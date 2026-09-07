@@ -426,6 +426,26 @@ async def cambiar_estado_action(
                 ),
             )
 
+    # La asistente solo gestiona casos en Tesorería, nunca los ajenos.
+    if es_asistente and caso.revisor_asignado_id is not None:
+        raise HTTPException(
+            status_code=403,
+            detail="El caso está en manos de otro paso del flujo. Solo la tesorera puede actuar sobre él.",
+        )
+
+    # Aprobar exige decisión registrada: porcentaje y, si es devolución, destino.
+    if estado_valido == EstadoCaso.APROBADO:
+        if caso.porcentaje_aplicado is None:
+            raise HTTPException(
+                status_code=409,
+                detail="Fija el porcentaje aplicado antes de aprobar el caso.",
+            )
+        if caso.tipo_solicitud == TipoSolicitud.DEVOLUCION and not caso.destino_devolucion:
+            raise HTTPException(
+                status_code=409,
+                detail="Indica el destino de la devolución antes de aprobar el caso.",
+            )
+
     estado_anterior = caso.estado
     caso.estado = estado_valido
 
@@ -487,11 +507,17 @@ async def actualizar_decision_action(
 
     porcentaje = data.get("porcentaje_aplicado")
     destino = data.get("destino_devolucion")
-    if rol == "asistente_tesoreria" and (porcentaje is not None or destino is not None):
-        raise HTTPException(
-            status_code=403,
-            detail="Los porcentajes y el destino los confirma el aprobador final.",
-        )
+    if rol == "asistente_tesoreria":
+        if caso.revisor_asignado_id is not None:
+            raise HTTPException(
+                status_code=403,
+                detail="El caso está en manos de otro paso del flujo. Solo la tesorera puede actuar sobre él.",
+            )
+        if porcentaje is not None or destino is not None:
+            raise HTTPException(
+                status_code=403,
+                detail="Los porcentajes y el destino los confirma el aprobador final.",
+            )
 
     tipo = caso.tipo_solicitud
     nivel_casos = []

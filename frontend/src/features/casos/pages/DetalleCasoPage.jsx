@@ -7,7 +7,7 @@ import { IconBack, IconUsers } from '../../../components/ui/icons';
 import { useAuth } from '../../auth/AuthContext';
 import { getCaso, cambiarEstado, agregarComentario, obtenerArchivo, actualizarCasoDecision, remitirCaso } from '../api/casosApi';
 import { listarDestinatarios } from '../../usuarios/api/usuariosApi';
-import { NIVELES_ACADEMICOS, NIVEL_ACADEMICO_LABEL } from '../constants';
+import { NIVELES_ACADEMICOS, NIVEL_ACADEMICO_LABEL, TIPOS_SOLICITUD } from '../constants';
 import StatusChanger from '../components/StatusChanger';
 import RemitirCard from '../components/RemitirCard';
 import FilesSidebar from '../components/FilesSidebar';
@@ -17,7 +17,7 @@ import DecisionCard from '../components/DecisionCard';
 import './DetalleCasoPage.css';
 
 function formatFecha(iso) {
-  return new Date(iso).toLocaleString('es-CO', { day: 'numeric', month: 'long', year: 'numeric' });
+  return new Date(iso).toLocaleString('es-CO', { timeZone: 'America/Bogota', day: 'numeric', month: 'long', year: 'numeric' });
 }
 
 export default function DetalleCasoPage() {
@@ -176,7 +176,6 @@ export default function DetalleCasoPage() {
   const esAdmin = user?.rol === 'admin';
   const esAsistente = user?.rol === 'asistente_tesoreria';
   const esAprobador = user?.rol === 'aprobador';
-  const sinEstadoNiDecision = user?.rol === 'revisor' || user?.rol === 'centro_medico';
 
   // Quien opera en el flujo solo comenta sus casos en mano (el historial es lectura).
   const esTenedor =
@@ -186,9 +185,21 @@ export default function DetalleCasoPage() {
   const esRestringido = ['revisor', 'centro_medico', 'aprobador'].includes(user?.rol);
   const puedeComentar = !esRestringido || esTenedor;
 
+  // Quién puede gestionar estado y decisión: admin siempre; asistente solo en
+  // Tesorería; aprobador solo en sus casos en mano. Nadie toca casos ajenos.
+  const puedeGestionar =
+    user?.rol === 'admin' ||
+    (user?.rol === 'asistente_tesoreria' && caso.revisor_asignado_id == null) ||
+    (user?.rol === 'aprobador' && esTenedor);
+
+  // Aprobar exige decisión registrada: porcentaje y destino si es devolución.
+  const puedeAprobar =
+    caso.porcentaje_aplicado != null &&
+    (caso.tipo_solicitud !== TIPOS_SOLICITUD.DEVOLUCION || caso.destino_devolucion != null);
+
   const HINT_POR_ROL = {
-    revisor: 'Este caso está en tus manos para revisión de detalle. Revísalo y envíalo a aprobación final o devuélvelo a Mónica con el motivo.',
-    centro_medico: 'Este caso está en tus manos para validación médica. Revisa los soportes y devuélvelo a Mónica con tu visto bueno.',
+    revisor: 'Este caso está en tus manos para revisión de detalle. Revísalo y envíalo a aprobación final o devuélvelo a Tesorería con el motivo.',
+    centro_medico: 'Este caso está en tus manos para validación médica. Revisa los soportes y devuélvelo a Tesorería con tu veredicto.',
     aprobador: 'Este caso está en tus manos para aprobación final. Registra la decisión o devuélvelo a revisión de detalle con el motivo.',
   };
 
@@ -261,6 +272,8 @@ export default function DetalleCasoPage() {
                   <select
                     className="detalle-select"
                     value={caso.nivel_academico || NIVELES_ACADEMICOS.PREGRADO}
+                    disabled={!puedeGestionar}
+                    title={!puedeGestionar ? 'Solo quien tiene el caso puede editar estos datos' : undefined}
                     onChange={(e) => onCambiarDecision({ nivel_academico: e.target.value })}
                   >
                     {Object.values(NIVELES_ACADEMICOS).map((n) => (
@@ -310,16 +323,17 @@ export default function DetalleCasoPage() {
               remitiendo={remitiendo}
               actor={user}
             />
-            {!sinEstadoNiDecision && (
+            {puedeGestionar && (
               <StatusChanger
                 estadoActual={caso.estado}
                 onCambiar={onCambiarEstado}
                 cambiando={cambiandoEstado}
                 esAdmin={esAdmin}
                 soloFinales={esAprobador}
+                puedeAprobar={puedeAprobar}
               />
             )}
-            {!sinEstadoNiDecision && (
+            {puedeGestionar && (
               <DecisionCard
                 caso={caso}
                 onCambiar={onCambiarDecision}

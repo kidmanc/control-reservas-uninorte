@@ -1,7 +1,7 @@
 import re
 
 from pydantic import BaseModel, Field, field_validator
-from datetime import datetime
+from datetime import datetime, timezone
 
 from config import settings
 
@@ -56,6 +56,13 @@ class CasoResponse(CasoBase):
     tercero_correo: str | None = None
     fecha_creacion: datetime
     fecha_ultima_actualizacion: datetime
+
+    @field_validator("fecha_creacion", "fecha_ultima_actualizacion", mode="before")
+    @classmethod
+    def _fechas_como_utc(cls, valor):
+        if isinstance(valor, datetime) and valor.tzinfo is None:
+            return valor.replace(tzinfo=timezone.utc)
+        return valor
 
     class Config:
         from_attributes = True

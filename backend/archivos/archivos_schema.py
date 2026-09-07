@@ -1,6 +1,6 @@
-from datetime import datetime
+from datetime import datetime, timezone
 
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 
 
 class ArchivoResponse(BaseModel):
@@ -10,6 +10,13 @@ class ArchivoResponse(BaseModel):
     nombre_archivo: str
     descripcion: str | None = None
     fecha: datetime | None = None
+
+    @field_validator("fecha", mode="before")
+    @classmethod
+    def _fecha_como_utc(cls, valor):
+        if isinstance(valor, datetime) and valor.tzinfo is None:
+            return valor.replace(tzinfo=timezone.utc)
+        return valor
 
     class Config:
         from_attributes = True

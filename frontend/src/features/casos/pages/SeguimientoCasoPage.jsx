@@ -10,7 +10,7 @@ import './DetalleCasoPage.css';
 import './SeguimientoCasoPage.css';
 
 function formatFecha(iso) {
-  return new Date(iso).toLocaleString('es-CO', { day: 'numeric', month: 'long', hour: 'numeric', minute: '2-digit' });
+  return new Date(iso).toLocaleString('es-CO', { timeZone: 'America/Bogota', day: 'numeric', month: 'long', hour: 'numeric', minute: '2-digit' });
 }
 
 const ESTADO_DOT = {
@@ -181,15 +181,21 @@ export default function SeguimientoCasoPage() {
           <h2>Estado de tu solicitud</h2>
           {[...caso.historial_estados].reverse().map((h) => {
             const cfg = ESTADO_DOT[h.estado_nuevo];
+            // Igual que en el panel: si no hubo cambio de estado, el título es
+            // el movimiento registrado (ej. remisión), no un cambio de estado.
+            const huboCambio = !h.estado_anterior || h.estado_anterior !== h.estado_nuevo;
+            const titulo = !h.estado_anterior
+              ? 'Solicitud recibida'
+              : huboCambio
+                ? `Estado cambiado a "${estadoLabel(h.estado_nuevo)}"`
+                : h.descripcion || 'Actualización de tu caso';
             return (
               <div className="timeline-item" key={h.id}>
                 <div className="timeline-dot" style={{ background: cfg.bg }}>
                   {cfg.icon}
                 </div>
                 <div className="timeline-content">
-                  <div className="timeline-title">
-                    {h.estado_anterior ? `Estado cambiado a "${estadoLabel(h.estado_nuevo)}"` : 'Solicitud recibida'}
-                  </div>
+                  <div className="timeline-title">{titulo}</div>
                   <div className="timeline-time">{formatFecha(h.fecha)}</div>
                 </div>
               </div>

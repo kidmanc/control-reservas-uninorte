@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { IconComment, IconEye } from '../../../components/ui/icons';
 
 function formatFecha(iso) {
-  return new Date(iso).toLocaleString('es-CO', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' });
+  return new Date(iso).toLocaleString('es-CO', { timeZone: 'America/Bogota', day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' });
 }
 
 export default function CommentComposer({ comentarios, onAgregar, enviando }) {
