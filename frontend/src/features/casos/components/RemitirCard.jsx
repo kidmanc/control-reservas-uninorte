@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { ESTADOS_FINALES, ESTADO_LABEL } from '../constants';
 import { IconUsers } from '../../../components/ui/icons';
 import './RemitirCard.css';
 
@@ -110,6 +111,8 @@ export default function RemitirCard({ caso, destinatarios, onRemitir, remitiendo
   const esTesoreria = actor?.rol === 'admin' || actor?.rol === 'asistente_tesoreria';
   const esTenedor =
     caso.revisor_asignado_id == null ? esTesoreria : caso.revisor_asignado_id === actor?.id;
+  const esAdmin = actor?.rol === 'admin';
+  const finalizado = ESTADOS_FINALES.includes(caso.estado);
 
   const tenedor = destinatarios.find((d) => d.id === caso.revisor_asignado_id) || null;
   const pasos = pasosValidos(tenedor, destinatarios, caso);
@@ -185,7 +188,13 @@ export default function RemitirCard({ caso, destinatarios, onRemitir, remitiendo
         En manos de: <strong>{nombreTenedor(tenedor)}</strong>
       </p>
 
-      {esTenedor && renderPasos()}
+      {finalizado && !esAdmin && (
+        <p className="empty-hint" style={{ marginTop: 8 }}>
+          Caso finalizado ({ESTADO_LABEL[caso.estado].toLowerCase()}): sin movimientos. Solo la tesorera puede reabrirlo.
+        </p>
+      )}
+
+      {esTenedor && !(finalizado && !esAdmin) && renderPasos()}
 
       {!esTenedor && actor?.rol === 'admin' && tenedor && (
         <>

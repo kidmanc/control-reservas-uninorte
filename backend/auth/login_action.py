@@ -38,7 +38,7 @@ def verificar_token(token: str) -> dict | None:
 
 
 async def login_action(db: AsyncSession, correo: str, contrasena: str) -> dict | None:
-    result = await db.execute(select(Usuario).where(Usuario.correo == correo))
+    result = await db.execute(select(Usuario).where(Usuario.correo == correo.strip().lower()))
     usuario = result.scalar_one_or_none()
 
     if not usuario or not verificar_contrasena(contrasena, usuario.contrasena_hash):
@@ -67,6 +67,10 @@ async def me_action(db: AsyncSession, user_id: int) -> dict | None:
     usuario = result.scalar_one_or_none()
 
     if not usuario:
+        return None
+
+    # Sesiones de usuarios desactivados quedan invalidadas de inmediato.
+    if usuario.activo is False:
         return None
 
     return {

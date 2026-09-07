@@ -16,8 +16,6 @@ from casos.casos_controller import (
     crear_caso_controller,
     listar_casos_controller,
     listar_participados_controller,
-    obtener_caso_controller,
-    obtener_caso_por_numero_controller,
     cambiar_estado_controller,
     actualizar_decision_controller,
     exigir_acceso_caso_controller,
@@ -82,7 +80,8 @@ async def obtener_caso(
     db: AsyncSession = Depends(get_db),
     user: dict | None = Depends(get_current_user_optional),
 ):
-    return await exigir_acceso_caso_controller(db, caso_id, user)
+    caso = await exigir_acceso_caso_controller(db, caso_id, user)
+    return _vista_publica(db, caso, user)
 
 
 @router.get("/numero/{numero}", response_model=CasoDetalle)
@@ -91,7 +90,20 @@ async def obtener_caso_por_numero(
     db: AsyncSession = Depends(get_db),
     user: dict | None = Depends(get_current_user_optional),
 ):
-    return await exigir_acceso_caso_por_numero_controller(db, numero, user)
+    caso = await exigir_acceso_caso_por_numero_controller(db, numero, user)
+    return _vista_publica(db, caso, user)
+
+
+def _vista_publica(db: AsyncSession, caso, user: dict | None):
+    """El canal público (estudiante sin login) no ve comentarios internos.
+
+    Se separa el objeto de la sesión antes de filtrar para que ningún flush
+    accidental persista el recorte.
+    """
+    if user is None:
+        db.expunge(caso)
+        caso.comentarios = [c for c in caso.comentarios if c.visible_para_estudiante]
+    return caso
 
 
 @router.patch("/{caso_id}/estado", response_model=CasoResponse)

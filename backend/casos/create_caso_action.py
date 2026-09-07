@@ -43,9 +43,11 @@ async def crear_caso_action(
     subido_por: str,
 ) -> Caso:
     # Una solicitud del mismo tipo para el mismo período solo puede existir una vez.
+    codigo = data["codigo_estudiantil"].strip()
+    nombre = data["nombre_completo"].strip()
     duplicado = await db.execute(
         select(Caso).where(
-            Caso.codigo_estudiantil == data["codigo_estudiantil"],
+            Caso.codigo_estudiantil == codigo,
             Caso.tipo_solicitud == data["tipo_solicitud"],
             Caso.periodo_academico == data["periodo_academico"],
         )
@@ -67,8 +69,8 @@ async def crear_caso_action(
 
     caso = Caso(
         numero_caso=numero,
-        nombre_completo=data["nombre_completo"],
-        codigo_estudiantil=data["codigo_estudiantil"],
+        nombre_completo=nombre,
+        codigo_estudiantil=codigo,
         correo_institucional=data["correo_institucional"],
         telefono_contacto=data.get("telefono_contacto"),
         programa_academico=data["programa_academico"],
@@ -136,7 +138,7 @@ async def obtener_caso_action(db: AsyncSession, caso_id: int) -> Caso | None:
 
 
 async def obtener_caso_por_numero_action(db: AsyncSession, numero: str) -> Caso | None:
-    result = await db.execute(select(Caso).where(Caso.numero_caso == numero))
+    result = await db.execute(select(Caso).where(Caso.numero_caso == numero.strip().upper()))
     return result.scalar_one_or_none()
 
 
@@ -242,6 +244,12 @@ async def remitir_caso_action(
         return None
 
     rol_actor = actor.get("rol")
+    # Un caso cerrado está congelado: solo la tesorera puede reabrirlo o moverlo.
+    if caso.estado in (EstadoCaso.APROBADO, EstadoCaso.RECHAZADO) and rol_actor != "admin":
+        raise HTTPException(
+            status_code=409,
+            detail="El caso está cerrado (aprobado o rechazado). Solo la tesorera puede reabrirlo o moverlo.",
+        )
     # Quien opera en el flujo solo mueve los casos que tiene en sus manos.
     if rol_actor in ROLES_RESTRINGIDOS and caso.revisor_asignado_id != actor.get("id"):
         raise HTTPException(
@@ -501,6 +509,13 @@ async def actualizar_decision_action(
     caso = await obtener_caso_action(db, caso_id)
     if not caso:
         return None
+
+    # Decisión congelada en casos cerrados, salvo override de tesorería.
+    if caso.estado in (EstadoCaso.APROBADO, EstadoCaso.RECHAZADO) and rol != "admin":
+        raise HTTPException(
+            status_code=409,
+            detail="El caso está cerrado. Solo la tesorera puede modificar su decisión.",
+        )
 
     if rol in ROLES_RESTRINGIDOS and actor_id is not None and caso.revisor_asignado_id != actor_id:
         raise HTTPException(

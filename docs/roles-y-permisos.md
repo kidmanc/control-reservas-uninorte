@@ -15,8 +15,8 @@ El caso siempre está **en manos de una sola persona**. Los pasos válidos son:
 
 | Rol | Ve | Puede hacer | NO puede |
 |---|---|---|---|
-| **Tesorero (admin)** | Todos los casos | Gestionar usuarios; corregir estados finales; operar cualquier paso válido del recorrido (override) | No opera el flujo día a día |
-| **Asistente de Tesorería** | Todos los casos | En casos en Tesorería: cambiar estados **no finales**; editar nivel académico; enviar a Centro Médico o a Revisión | Tocar casos en manos de otro paso; fijar aprobado/rechazado; fijar porcentajes o destino; sacar casos de `falta_documentacion` o de estados finales |
+| **Tesorero (admin)** | Todos los casos | Gestionar usuarios; corregir estados finales y decisiones cerradas; operar cualquier paso válido del recorrido (override) | No opera el flujo día a día |
+| **Asistente de Tesorería** | Todos los casos | En casos en Tesorería no finalizados: cambiar estados **no finales**; editar nivel académico; enviar a Centro Médico o a Revisión | Tocar casos en manos de otro paso o cerrados; fijar aprobado/rechazado; fijar porcentajes o destino; sacar casos de `falta_documentacion` |
 | **Revisor de detalle** | Sus casos en mano + los que ya revisó (una sola lista) | Comentar sus casos; enviar a Aprobación final; devolver a Tesorería **con correcciones** (motivo obligatorio) | Cambiar estados; registrar decisiones; ver casos ajenos |
 | **Centro Médico** | Sus casos en mano + los que ya revisó (una sola lista) | Comentar sus casos; devolver a Tesorería con veredicto: **documentos válidos** o **documentos inválidos** (motivo obligatorio) | Cambiar estados; registrar decisiones; enviar a otro paso |
 | **Aprobador final** | Sus casos en mano + los que ya revisó (una sola lista) | Fijar **aprobado/rechazado** (exige porcentaje y, si es devolución, destino); fijar porcentaje y destino; devolver **a quien se lo envió** con correcciones (motivo obligatorio) | Cambiar estados no finales; aprobar sin porcentaje; ver casos ajenos |
@@ -33,8 +33,16 @@ El caso siempre está **en manos de una sola persona**. Los pasos válidos son:
 
 - Estados: `recibido`, `en_revision`, `falta_documentacion`, `aprobado`, `rechazado`.
 - `en_revision` **no es opción manual**: el proceso interno mueve `recibido → en_revision` a las 24 horas.
+- Aprobar exige porcentaje (y destino si es devolución); al rechazar, el porcentaje queda en 0% automáticamente.
+- Un caso aprobado o rechazado queda **congelado**: solo la tesorera puede reabrirlo, moverlo o corregir su decisión.
 - Si el caso está en `falta_documentacion`, al adjuntar el estudiante sus documentos vuelve solo a `en_revision`.
-- Nadie (salvo el tesorero) toca casos en `falta_documentacion` ni en estados finales.
+- Nadie (salvo la tesorera) toca casos en `falta_documentacion` ni en estados finales.
+
+## Canal público y sesiones
+
+- El enlace del estudiante es público por diseño (como un número de guía): muestra el caso, sus archivos, su trazabilidad y solo los comentarios visibles. Los comentarios internos nunca se exponen sin login.
+- Desactivar un usuario invalida su sesión de inmediato (además de impedirle entrar).
+- Todas las fechas se muestran en **hora de Colombia** (el backend emite UTC y el frontend convierte).
 
 ## Notas
 

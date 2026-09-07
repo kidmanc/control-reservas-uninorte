@@ -7,7 +7,7 @@ import { IconBack, IconUsers } from '../../../components/ui/icons';
 import { useAuth } from '../../auth/AuthContext';
 import { getCaso, cambiarEstado, agregarComentario, obtenerArchivo, actualizarCasoDecision, remitirCaso } from '../api/casosApi';
 import { listarDestinatarios } from '../../usuarios/api/usuariosApi';
-import { NIVELES_ACADEMICOS, NIVEL_ACADEMICO_LABEL, TIPOS_SOLICITUD } from '../constants';
+import { NIVELES_ACADEMICOS, NIVEL_ACADEMICO_LABEL, TIPOS_SOLICITUD, ESTADOS_FINALES } from '../constants';
 import StatusChanger from '../components/StatusChanger';
 import RemitirCard from '../components/RemitirCard';
 import FilesSidebar from '../components/FilesSidebar';
@@ -185,12 +185,15 @@ export default function DetalleCasoPage() {
   const esRestringido = ['revisor', 'centro_medico', 'aprobador'].includes(user?.rol);
   const puedeComentar = !esRestringido || esTenedor;
 
-  // Quién puede gestionar estado y decisión: admin siempre; asistente solo en
-  // Tesorería; aprobador solo en sus casos en mano. Nadie toca casos ajenos.
+  // Quién puede gestionar estado y decisión: admin siempre (incluso en
+  // cerrados, para corregir); asistente solo en Tesorería no finalizados;
+  // aprobador solo en sus casos en mano. Nadie toca casos ajenos.
+  const finalizado = ESTADOS_FINALES.includes(caso.estado);
   const puedeGestionar =
     user?.rol === 'admin' ||
-    (user?.rol === 'asistente_tesoreria' && caso.revisor_asignado_id == null) ||
-    (user?.rol === 'aprobador' && esTenedor);
+    (!finalizado &&
+      ((user?.rol === 'asistente_tesoreria' && caso.revisor_asignado_id == null) ||
+        (user?.rol === 'aprobador' && esTenedor)));
 
   // Aprobar exige decisión registrada: porcentaje y destino si es devolución.
   const puedeAprobar =

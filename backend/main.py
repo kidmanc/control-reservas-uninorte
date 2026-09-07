@@ -70,10 +70,20 @@ async def tarea_transiciones_automaticas() -> None:
 
 async def registrar_participaciones_existentes() -> int:
     """Backfill idempotente: casos asignados antes de existir el historial."""
-    from casos.casos_model import Caso, ParticipacionCaso
+    from casos.casos_model import Caso, EstadoCaso, ParticipacionCaso
 
     agregados = 0
     async with async_session() as db:
+        # Casos cerrados antes de la liberación automática: soltar tenedor.
+        finalizados = await db.execute(
+            select(Caso).where(
+                Caso.estado.in_([EstadoCaso.APROBADO, EstadoCaso.RECHAZADO]),
+                Caso.revisor_asignado_id.is_not(None),
+            )
+        )
+        for caso in finalizados.scalars().all():
+            caso.revisor_asignado_id = None
+            caso.remitido_por_id = None
         result = await db.execute(
             select(Caso).where(
                 (Caso.revisor_asignado_id.is_not(None)) | (Caso.remitido_por_id.is_not(None))
@@ -119,6 +129,50 @@ def _resolver_usuario_por_nombre(usuarios, texto):
             if usuario.nombre.lower().startswith(candidato.lower()):
                 return usuario
     return None
+
+
+async def reparar_remitido_por_faltante() -> int:
+    """Backfill idempotente: deduce quién envió cada caso en aprobación.
+
+    Sin remitente registrado, el aprobador quedaría bloqueado (solo puede
+    devolver a quien se lo envió). Se deduce de la última remisión en la
+    trazabilidad; si no se puede deducir, queda para override de tesorería.
+    """
+    from casos.casos_model import Caso
+    from historial.historial_model import HistorialEstado
+    from usuarios.usuarios_model import Usuario
+
+    reparados = 0
+    async with async_session() as db:
+        pendientes = await db.execute(
+            select(Caso).where(
+                Caso.revisor_asignado_id.is_not(None),
+                Caso.remitido_por_id.is_(None),
+            )
+        )
+        usuarios = list((await db.execute(select(Usuario))).scalars().all())
+        por_id = {u.id: u for u in usuarios}
+        for caso in pendientes.scalars().all():
+            tenedor = por_id.get(caso.revisor_asignado_id)
+            if not tenedor or tenedor.rol != "aprobador":
+                continue
+            movimientos = await db.execute(
+                select(HistorialEstado)
+                .where(
+                    HistorialEstado.caso_id == caso.id,
+                    HistorialEstado.descripcion.ilike(f"%remitido a {tenedor.nombre}%"),
+                )
+                .order_by(HistorialEstado.fecha.desc(), HistorialEstado.id.desc())
+            )
+            ultimo = movimientos.scalars().first()
+            if not ultimo:
+                continue
+            remitente = _resolver_usuario_por_nombre(usuarios, ultimo.cambiado_por)
+            if remitente and remitente.id != tenedor.id:
+                caso.remitido_por_id = remitente.id
+                reparados += 1
+        await db.commit()
+    return reparados
 
 
 async def registrar_participaciones_desde_historial() -> int:
@@ -174,6 +228,7 @@ async def lifespan(app: FastAPI):
     for tarea, nombre in (
         (registrar_participaciones_existentes, "participaciones actuales"),
         (registrar_participaciones_desde_historial, "participaciones desde historial"),
+        (reparar_remitido_por_faltante, "remitente en aprobación"),
     ):
         try:
             cantidad = await tarea()
