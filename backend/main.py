@@ -7,6 +7,7 @@ from contextlib import asynccontextmanager
 import asyncio
 import logging
 import os
+import re
 
 from config import settings
 
@@ -67,10 +68,11 @@ async def tarea_transiciones_automaticas() -> None:
             logger.warning("Fallo en transición automática: %s", error)
 
 
-async def registrar_participaciones_existentes() -> None:
+async def registrar_participaciones_existentes() -> int:
     """Backfill idempotente: casos asignados antes de existir el historial."""
     from casos.casos_model import Caso, ParticipacionCaso
 
+    agregados = 0
     async with async_session() as db:
         result = await db.execute(
             select(Caso).where(
@@ -89,7 +91,70 @@ async def registrar_participaciones_existentes() -> None:
                 )
                 if not existe.scalar_one_or_none():
                     db.add(ParticipacionCaso(caso_id=caso.id, usuario_id=uid))
+                    agregados += 1
         await db.commit()
+    return agregados
+
+
+_RE_DESTINO = re.compile(r"(?:remitido|devuelto|devuelta) a (.+?)(?: para revisión| —|:|$)", re.IGNORECASE)
+
+
+def _resolver_usuario_por_nombre(usuarios, texto):
+    """Localiza un usuario por nombre exacto, paréntesis o primer nombre.
+
+    Tolera que los nombres hayan cambiado (ej. "Mónica" -> "Mónica Correa").
+    Devuelve None si no hay coincidencia (ej. "sistema", "Tesorería").
+    """
+    nombre = (texto or "").strip()
+    if not nombre:
+        return None
+    for usuario in usuarios:
+        if usuario.nombre.lower() == nombre.lower():
+            return usuario
+    parentesis = re.search(r"\(([^)]+)\)", nombre)
+    candidatos = [parentesis.group(1).strip()] if parentesis else []
+    candidatos.append(nombre.split()[0])
+    for candidato in candidatos:
+        for usuario in usuarios:
+            if usuario.nombre.lower().startswith(candidato.lower()):
+                return usuario
+    return None
+
+
+async def registrar_participaciones_desde_historial() -> int:
+    """Backfill idempotente: reconstruye quién participó desde la trazabilidad.
+
+    Cura los casos movidos con versiones anteriores, cuando aún no se
+    registraban participaciones. Nunca falla: ante la duda omite el registro.
+    """
+    from casos.casos_model import ParticipacionCaso
+    from historial.historial_model import HistorialEstado
+    from usuarios.usuarios_model import Usuario
+
+    agregados = 0
+    async with async_session() as db:
+        usuarios = list((await db.execute(select(Usuario))).scalars().all())
+        movimientos = await db.execute(select(HistorialEstado))
+        for entrada in movimientos.scalars().all():
+            implicados = {_resolver_usuario_por_nombre(usuarios, entrada.cambiado_por)}
+            coincidencia = _RE_DESTINO.search(entrada.descripcion or "")
+            if coincidencia:
+                implicados.add(_resolver_usuario_por_nombre(usuarios, coincidencia.group(1)))
+            for usuario in {u for u in implicados if u is not None}:
+                try:
+                    existe = await db.execute(
+                        select(ParticipacionCaso).where(
+                            ParticipacionCaso.caso_id == entrada.caso_id,
+                            ParticipacionCaso.usuario_id == usuario.id,
+                        )
+                    )
+                    if not existe.scalar_one_or_none():
+                        db.add(ParticipacionCaso(caso_id=entrada.caso_id, usuario_id=usuario.id))
+                        agregados += 1
+                except Exception:  # noqa: BLE001 — un registro no frena el resto
+                    continue
+        await db.commit()
+    return agregados
 
 
 _tarea_transiciones: asyncio.Task | None = None
@@ -105,8 +170,16 @@ async def lifespan(app: FastAPI):
         await conn.run_sync(Base.metadata.create_all)
         await asegurar_columnas_casos(conn)
 
-    # Registrar participaciones de casos asignados antes de esta función.
-    await registrar_participaciones_existentes()
+    # Backfills idempotentes (nunca tumban el arranque; dejan rastro en el log).
+    for tarea, nombre in (
+        (registrar_participaciones_existentes, "participaciones actuales"),
+        (registrar_participaciones_desde_historial, "participaciones desde historial"),
+    ):
+        try:
+            cantidad = await tarea()
+            logger.info("Backfill %s: %d registro(s).", nombre, cantidad)
+        except Exception as error:  # noqa: BLE001 — arrancar es más importante
+            logger.warning("Backfill %s omitido: %s", nombre, error)
 
     global _tarea_transiciones
     _tarea_transiciones = asyncio.create_task(tarea_transiciones_automaticas())
