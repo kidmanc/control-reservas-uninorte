@@ -71,8 +71,6 @@ export default function App() {
               </ProtectedRoute>
             }
           />
-
-          {/* TODO: ruta de "Tipos de solicitud" */}
         </Routes>
       </AuthProvider>
     </BrowserRouter>
