@@ -214,6 +214,17 @@ async def registrar_participaciones_desde_historial() -> int:
     return agregados
 
 
+async def sembrar_catalogos_base() -> int:
+    """Los catálogos son datos de referencia: se siembran solos al arrancar.
+
+    Evita depender del seed manual para que el formulario funcione.
+    """
+    from catalogos.catalogos_controller import sembrar_catalogos_controller
+
+    async with async_session() as db:
+        return await sembrar_catalogos_controller(db)
+
+
 # --- App ---
 
 @asynccontextmanager
@@ -232,6 +243,7 @@ async def lifespan(app: FastAPI):
         (registrar_participaciones_existentes, "participaciones actuales"),
         (registrar_participaciones_desde_historial, "participaciones desde historial"),
         (reparar_remitido_por_faltante, "remitente en aprobación"),
+        (sembrar_catalogos_base, "catálogos base"),
     ):
         try:
             cantidad = await tarea()
