@@ -76,25 +76,47 @@ async def eliminar_catalogo_action(db: AsyncSession, item_id: int) -> bool:
 
 
 async def sembrar_catalogos_action(db: AsyncSession) -> int:
-    """Valores iniciales (programas del formulario actual)."""
-    iniciales = {
-        "programa": [
-            "Ingeniería de Sistemas",
-            "Administración de Empresas",
-            "Derecho",
-            "Ingeniería Industrial",
-            "Psicología",
-            "Ingeniería Electrónica",
-        ],
-    }
+    """Programas de pregrado Uninorte. Agrega los faltantes uno por uno."""
+    programas = [
+        "Administración de Empresas",
+        "Arquitectura",
+        "Ciencia de Datos",
+        "Ciencia Política y Gobierno",
+        "Comunicación Social y Periodismo",
+        "Contaduría Pública",
+        "Derecho",
+        "Diseño Gráfico",
+        "Diseño Industrial",
+        "Economía",
+        "Enfermería",
+        "Filosofía y Humanidades",
+        "Geología",
+        "Ingeniería Civil",
+        "Ingeniería de Sistemas",
+        "Ingeniería Eléctrica",
+        "Ingeniería Electrónica",
+        "Ingeniería Industrial",
+        "Ingeniería Mecánica",
+        "Matemáticas",
+        "Medicina",
+        "Música",
+        "Negocios Internacionales",
+        "Odontología",
+        "Psicología",
+        "Relaciones Internacionales",
+    ]
     creados = 0
-    for tipo, valores in iniciales.items():
-        existentes = await db.execute(select(func.count(Catalogo.id)).where(Catalogo.tipo == tipo))
-        if (existentes.scalar() or 0) > 0:
+    for valor in programas:
+        existente = await db.execute(
+            select(func.count(Catalogo.id)).where(
+                Catalogo.tipo == "programa",
+                func.lower(Catalogo.valor) == valor.lower(),
+            )
+        )
+        if (existente.scalar() or 0) > 0:
             continue
-        for valor in valores:
-            db.add(Catalogo(tipo=tipo, valor=valor, activo=True))
-            creados += 1
+        db.add(Catalogo(tipo="programa", valor=valor, activo=True))
+        creados += 1
     if creados:
         await db.commit()
     return creados

@@ -9,7 +9,34 @@ import { TIPOS_SOLICITUD, TIPO_SOLICITUD_LABEL, PARENTESCOS, NIVELES_ACADEMICOS,
 import { IconClock, IconInfo, IconUsers, IconUpload, IconCheckCircle, IconFile, IconArrowRight } from '../../../components/ui/icons';
 import './FormularioCasoPage.css';
 
-const PROGRAMAS_DEFECTO = ['Ingeniería de Sistemas', 'Administración de Empresas', 'Derecho', 'Ingeniería Industrial', 'Psicología', 'Ingeniería Electrónica'];
+const PROGRAMAS_DEFECTO = [
+  'Administración de Empresas',
+  'Arquitectura',
+  'Ciencia de Datos',
+  'Ciencia Política y Gobierno',
+  'Comunicación Social y Periodismo',
+  'Contaduría Pública',
+  'Derecho',
+  'Diseño Gráfico',
+  'Diseño Industrial',
+  'Economía',
+  'Enfermería',
+  'Filosofía y Humanidades',
+  'Geología',
+  'Ingeniería Civil',
+  'Ingeniería de Sistemas',
+  'Ingeniería Eléctrica',
+  'Ingeniería Electrónica',
+  'Ingeniería Industrial',
+  'Ingeniería Mecánica',
+  'Matemáticas',
+  'Medicina',
+  'Música',
+  'Negocios Internacionales',
+  'Odontología',
+  'Psicología',
+  'Relaciones Internacionales',
+];
 
 const ESTADO_INICIAL = {
   esTercero: false,
