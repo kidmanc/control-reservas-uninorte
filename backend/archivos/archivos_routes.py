@@ -5,7 +5,7 @@ from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from main import get_db
-from auth.auth_routes import get_current_user
+from auth.auth_routes import get_current_user, get_current_user_optional
 from config import settings
 from casos.casos_controller import exigir_acceso_caso_controller, obtener_caso_controller, exigir_codigo_publico
 from archivos.storage import guardar_archivo
@@ -48,7 +48,17 @@ async def subir_archivo(
 
 
 @router.get("/", response_model=list[ArchivoResponse])
-async def listar_archivos(caso_id: int, db: AsyncSession = Depends(get_db)):
+async def listar_archivos(
+    caso_id: int,
+    db: AsyncSession = Depends(get_db),
+    user: dict | None = Depends(get_current_user_optional),
+    codigo: str | None = None,
+):
+    # Antes era público sin control: ahora exige login con acceso al caso,
+    # o número + código en el canal del estudiante.
+    caso = await exigir_acceso_caso_controller(db, caso_id, user)
+    if user is None:
+        exigir_codigo_publico(caso, codigo)
     return await listar_archivos_controller(db, caso_id)
 
 

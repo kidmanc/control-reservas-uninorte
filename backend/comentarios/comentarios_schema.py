@@ -1,11 +1,13 @@
 from datetime import datetime, timezone
 
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, Field, field_validator
 
 
 class ComentarioCreate(BaseModel):
-    texto: str
-    autor: str
+    texto: str = Field(min_length=1, max_length=5000)
+    # El autor lo fija el servidor (usuario logueado o titular del caso);
+    # se conserva en el schema por compatibilidad y se ignora al guardar.
+    autor: str = Field(default="", max_length=200)
     visible_para_estudiante: bool = True
     # Código estudiantil: obligatorio solo en el canal público anónimo.
     codigo: str | None = None

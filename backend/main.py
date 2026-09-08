@@ -258,13 +258,11 @@ app = FastAPI(title=settings.APP_NAME, debug=settings.DEBUG, lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
+    allow_origins=settings.cors_origins,
+    allow_credentials=settings.cors_origins != ["*"],
     allow_methods=["*"],
     allow_headers=["*"],
 )
-# TODO(prod): restringir allow_origins a dominios reales (ej. https://app.uninorte.edu.co)
-# y quitar allow_credentials=True con origen "*". Esto es solo para desarrollo.
 
 # --- Routes ---
 
