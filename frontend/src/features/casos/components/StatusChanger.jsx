@@ -37,7 +37,7 @@ export default function StatusChanger({ estadoActual, onCambiar, cambiando, esAd
           else if (soloFinales && !esFinal) motivoBloqueo = 'Como aprobador final solo registras la aprobación o el rechazo.';
           else if (soloNoFinales && esFinal) motivoBloqueo = 'Solo el aprobador final registra la aprobación o el rechazo.';
           else if (esRecibido && estadoActual !== ESTADOS.RECIBIDO) motivoBloqueo = 'Recibido es el estado inicial: no se puede volver a él.';
-          else if (esAprobado && !puedeAprobar) motivoBloqueo = 'Fija el porcentaje (y el destino si es devolución) en la decisión antes de aprobar.';
+          else if (esAprobado && !puedeAprobar) motivoBloqueo = 'Falta la liquidación de Tesorería (porcentaje y destino si es devolución) antes de aprobar.';
           const deshabilitado = cambiando || estado === estadoActual || motivoBloqueo !== null;
           return (
             <button

@@ -185,25 +185,32 @@ export default function DetalleCasoPage() {
   const esRestringido = ['revisor', 'centro_medico', 'aprobador'].includes(user?.rol);
   const puedeComentar = !esRestringido || esTenedor;
 
-  // Quién puede gestionar estado y decisión: admin siempre (incluso en
-  // cerrados, para corregir); asistente solo en Tesorería no finalizados;
-  // aprobador solo en sus casos en mano. Nadie toca casos ajenos.
+  // Quién puede gestionar estado y liquidación:
+  // - Estado: admin siempre; asistente solo en Tesorería no finalizados;
+  //   aprobador solo finales en sus casos en mano.
+  // - Liquidación (porcentaje/destino/nivel): admin siempre; asistente en
+  //   Tesorería no finalizados. El aprobador solo aprueba/rechaza, no liquida;
+  //   el revisor solo confirma ejecución. Nadie toca casos ajenos.
   const finalizado = ESTADOS_FINALES.includes(caso.estado);
+  const enTesoreria = caso.revisor_asignado_id == null;
   const puedeGestionar =
     user?.rol === 'admin' ||
     (!finalizado &&
-      ((user?.rol === 'asistente_tesoreria' && caso.revisor_asignado_id == null) ||
+      ((user?.rol === 'asistente_tesoreria' && enTesoreria) ||
         (user?.rol === 'aprobador' && esTenedor)));
+  const puedeEditarDecision =
+    user?.rol === 'admin' ||
+    (!finalizado && user?.rol === 'asistente_tesoreria' && enTesoreria);
 
-  // Aprobar exige decisión registrada: porcentaje y destino si es devolución.
+  // Aprobar exige liquidación previa del asistente: porcentaje y destino si es devolución.
   const puedeAprobar =
     caso.porcentaje_aplicado != null &&
     (caso.tipo_solicitud !== TIPOS_SOLICITUD.DEVOLUCION || caso.destino_devolucion != null);
 
   const HINT_POR_ROL = {
-    revisor: 'Este caso está en tus manos para revisión de detalle. Revísalo y envíalo a aprobación final o devuélvelo a Tesorería con el motivo.',
+    revisor: 'Este caso está en tus manos para ejecución. Confirma que ya ejecutaste en la otra plataforma y envíalo a aprobación final, o devuélvelo a Tesorería con el motivo.',
     centro_medico: 'Este caso está en tus manos para validación médica. Revisa los soportes y devuélvelo a Tesorería con tu veredicto.',
-    aprobador: 'Este caso está en tus manos para aprobación final. Registra la decisión o devuélvelo a revisión de detalle con el motivo.',
+    aprobador: 'Este caso está en tus manos para aprobación final. La liquidación ya la registró Tesorería: solo aprueba o rechaza, o devuélvelo con el motivo.',
   };
 
   return (
@@ -275,8 +282,8 @@ export default function DetalleCasoPage() {
                   <select
                     className="detalle-select"
                     value={caso.nivel_academico || NIVELES_ACADEMICOS.PREGRADO}
-                    disabled={!puedeGestionar}
-                    title={!puedeGestionar ? 'Solo quien tiene el caso puede editar estos datos' : undefined}
+                    disabled={!puedeEditarDecision}
+                    title={!puedeEditarDecision ? 'La liquidación la registra el asistente de Tesorería' : undefined}
                     onChange={(e) => onCambiarDecision({ nivel_academico: e.target.value })}
                   >
                     {Object.values(NIVELES_ACADEMICOS).map((n) => (
@@ -342,7 +349,7 @@ export default function DetalleCasoPage() {
                 caso={caso}
                 onCambiar={onCambiarDecision}
                 guardando={guardandoDecision}
-                soloLectura={esAsistente}
+                soloLectura={!puedeEditarDecision}
               />
             )}
             <FilesSidebar

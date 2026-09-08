@@ -526,7 +526,11 @@ async def actualizar_decision_action(
     rol: str = "asistente_tesoreria",
     actor_id: int | None = None,
 ) -> Caso | None:
-    """Actualiza nivel académico, porcentaje aplicado y/o destino de devolución."""
+    """Actualiza nivel académico y liquidación (porcentaje aplicado y/o destino de devolución).
+
+    La liquidación la registra el asistente de Tesorería; el aprobador final
+    solo aprueba/rechaza y no edita estos datos.
+    """
     caso = await obtener_caso_action(db, caso_id)
     if not caso:
         return None
@@ -552,16 +556,19 @@ async def actualizar_decision_action(
 
     porcentaje = data.get("porcentaje_aplicado")
     destino = data.get("destino_devolucion")
+    # Liquidación: el asistente de Tesorería fija porcentaje y destino
+    # mientras el caso está en Tesorería. El aprobador final solo
+    # aprueba/rechaza (vía cambio de estado), no edita la liquidación.
+    if rol == "aprobador":
+        raise HTTPException(
+            status_code=403,
+            detail="El aprobador final solo registra la aprobación o el rechazo del caso. La liquidación la hace Tesorería.",
+        )
     if rol == "asistente_tesoreria":
         if caso.revisor_asignado_id is not None:
             raise HTTPException(
                 status_code=403,
                 detail="El caso está en manos de otro paso del flujo. Solo la tesorera puede actuar sobre él.",
-            )
-        if porcentaje is not None or destino is not None:
-            raise HTTPException(
-                status_code=403,
-                detail="Los porcentajes y el destino los confirma el aprobador final.",
             )
 
     tipo = caso.tipo_solicitud

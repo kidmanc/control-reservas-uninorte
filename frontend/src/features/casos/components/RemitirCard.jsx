@@ -14,7 +14,7 @@ const ROL_LABEL = {
 // Qué espera Tesorería de quien tiene el caso.
 const ESPERA_POR_ROL = {
   centro_medico: 'esperando su visto bueno sobre los documentos.',
-  revisor: 'esperando su revisión (enviar a aprobación o devolver con correcciones).',
+  revisor: 'esperando confirmación de que ya ejecutó en la otra plataforma.',
   aprobador: 'esperando su aprobación final.',
 };
 
@@ -54,13 +54,14 @@ function pasosValidos(tenedor, destinatarios, caso) {
     ];
   }
 
-  // Revisión de detalle: a aprobación final o de vuelta con correcciones.
+  // Revisión de detalle: la revisión se hace en otra plataforma; aquí solo
+  // confirma que ya ejecutó y envía a aprobación final, o devuelve con correcciones.
   if (rolTenedor === 'revisor') {
     const adelantes = destinatarios
       .filter((d) => d.rol === 'aprobador')
       .map((d) => ({
         revisor_id: d.id,
-        etiqueta: d.nombre,
+        etiqueta: `Confirmar ejecución y enviar a aprobación — ${d.nombre}`,
         esDevolucion: false,
         veredicto: null,
         requiereMotivo: false,
