@@ -272,7 +272,12 @@ function BloqueCatalogo({ tipo, titulo, hint, items, nuevo, setNuevo, guardando,
       {items.length === 0 && <div className="empty-row">Sin valores todavía.</div>}
       {items.map((item) => (
         <div className="catalogo-row" key={item.id}>
-          <span className={`tag-name${item.activo ? '' : ' inactivo'}`}>{item.valor}</span>
+          <span className={`tag-name${item.activo ? '' : ' inactivo'}`}>
+            {item.valor}
+            {item.nivel && (
+              <span className="nivel-tag">{item.nivel === 'pregrado' ? 'Pregrado' : 'Posgrado'}</span>
+            )}
+          </span>
           <button
             type="button"
             className={`toggle-btn${item.activo ? '' : ' off'}`}

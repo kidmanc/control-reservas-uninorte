@@ -28,23 +28,29 @@ async def get_db():
 
 
 # Columnas nuevas que `create_all` no agrega a una base SQLite existente.
-NUEVAS_COLUMNAS_CASOS = {
-    "nivel_academico": "VARCHAR(50)",
-    "porcentaje_aplicado": "FLOAT",
-    "destino_devolucion": "VARCHAR(50)",
-    "revisor_asignado_id": "INTEGER",
-    "remitido_por_id": "INTEGER",
+NUEVAS_COLUMNAS = {
+    "casos": {
+        "nivel_academico": "VARCHAR(50)",
+        "porcentaje_aplicado": "FLOAT",
+        "destino_devolucion": "VARCHAR(50)",
+        "revisor_asignado_id": "INTEGER",
+        "remitido_por_id": "INTEGER",
+    },
+    "catalogos": {
+        "nivel": "VARCHAR(20)",
+    },
 }
 
 
-async def asegurar_columnas_casos(conn) -> None:
+async def asegurar_columnas(conn) -> None:
     """Migración ligera: agrega con ALTER TABLE las columnas que falten."""
 
     def _ejecutar(conn_sync) -> None:
-        existentes = {fila[1] for fila in conn_sync.exec_driver_sql("PRAGMA table_info(casos)")}
-        for nombre, tipo in NUEVAS_COLUMNAS_CASOS.items():
-            if nombre not in existentes:
-                conn_sync.exec_driver_sql(f"ALTER TABLE casos ADD COLUMN {nombre} {tipo}")
+        for tabla, columnas in NUEVAS_COLUMNAS.items():
+            existentes = {fila[1] for fila in conn_sync.exec_driver_sql(f"PRAGMA table_info({tabla})")}
+            for nombre, tipo in columnas.items():
+                if nombre not in existentes:
+                    conn_sync.exec_driver_sql(f"ALTER TABLE {tabla} ADD COLUMN {nombre} {tipo}")
 
     await conn.run_sync(_ejecutar)
 
@@ -216,7 +222,7 @@ async def lifespan(app: FastAPI):
     # Crear tablas al iniciar y migrar columnas nuevas en una BD existente.
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
-        await asegurar_columnas_casos(conn)
+        await asegurar_columnas(conn)
         retirados = await retirar_estado_en_revision(conn)
         if retirados:
             logger.info("Migración en_revision: %d caso(s) devueltos a recibido.", retirados)

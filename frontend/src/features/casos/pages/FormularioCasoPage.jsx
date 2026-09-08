@@ -55,6 +55,14 @@ const ESTADO_INICIAL = {
   archivo_representacion: null,
 };
 
+function programasVisibles(catalogos, nivel) {
+  const base = catalogos === null
+    ? PROGRAMAS_DEFECTO.map((valor) => ({ valor, nivel: null }))
+    : catalogos;
+  const nombres = base.filter((p) => !p.nivel || p.nivel === nivel).map((p) => p.valor);
+  return nombres.length > 0 ? nombres : PROGRAMAS_DEFECTO;
+}
+
 export default function FormularioCasoPage() {
   const location = useLocation();
   const esPanel = location.pathname.startsWith('/panel');
@@ -62,27 +70,43 @@ export default function FormularioCasoPage() {
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState(null);
   const [casoCreado, setCasoCreado] = useState(null);
-  const [catalogos, setCatalogos] = useState({ programas: [] });
+  // null = catálogo sin cargar (se usan los valores fijos).
+  const [catalogos, setCatalogos] = useState(null);
   // Período calculado por fecha (anterior, actual, siguiente): nadie lo administra.
   const [periodos] = useState(() => periodosCercanos());
+
+  // Programas del nivel elegido (los sin nivel salen en ambos).
+  const programas = programasVisibles(catalogos, form.nivel_academico);
 
   // Catálogo de programas administrable (con valores fijos si el backend no responde).
   useEffect(() => {
     listarCatalogos()
       .then((items) => {
-        const programas = items.filter((x) => x.tipo === 'programa').map((x) => x.valor);
-        setCatalogos({ programas });
-        setForm((f) => ({
-          ...f,
-          programa_academico: programas.includes(f.programa_academico)
-            ? f.programa_academico
-            : programas[0] || f.programa_academico,
-        }));
+        const lista = items.filter((x) => x.tipo === 'programa');
+        setCatalogos(lista);
+        setForm((f) => {
+          const validos = programasVisibles(lista, f.nivel_academico);
+          return {
+            ...f,
+            programa_academico: validos.includes(f.programa_academico)
+              ? f.programa_academico
+              : validos[0] || f.programa_academico,
+          };
+        });
       })
       .catch(() => {});
   }, []);
 
-  const programas = catalogos.programas.length > 0 ? catalogos.programas : PROGRAMAS_DEFECTO;
+  function onCambiarNivel(nivel) {
+    setForm((f) => {
+      const validos = programasVisibles(catalogos, nivel);
+      return {
+        ...f,
+        nivel_academico: nivel,
+        programa_academico: validos.includes(f.programa_academico) ? f.programa_academico : validos[0] || '',
+      };
+    });
+  }
 
   function set(campo, valor) {
     setForm((f) => ({ ...f, [campo]: valor }));
@@ -400,7 +424,7 @@ export default function FormularioCasoPage() {
             </div>
             <div className="field">
               <label>Nivel académico</label>
-              <select value={form.nivel_academico} onChange={(e) => set('nivel_academico', e.target.value)}>
+              <select value={form.nivel_academico} onChange={(e) => onCambiarNivel(e.target.value)}>
                 {Object.values(NIVELES_ACADEMICOS).map((n) => (
                   <option key={n} value={n}>
                     {NIVEL_ACADEMICO_LABEL[n]}

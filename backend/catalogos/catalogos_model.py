@@ -13,6 +13,8 @@ class Catalogo(Base):
     id = Column(Integer, primary_key=True, index=True)
     tipo = Column(String(50), nullable=False, index=True)
     valor = Column(String(200), nullable=False)
+    # Nivel al que aplica el programa ('pregrado'/'posgrado'). Nulo = ambos.
+    nivel = Column(String(20), nullable=True)
     activo = Column(Boolean, default=True)
 
     __table_args__ = (UniqueConstraint("tipo", "valor"),)

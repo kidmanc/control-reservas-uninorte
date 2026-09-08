@@ -15,6 +15,7 @@ class CatalogoResponse(BaseModel):
     id: int
     tipo: str
     valor: str
+    nivel: str | None = None
     activo: bool | None = True
 
     class Config:
