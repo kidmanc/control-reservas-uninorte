@@ -67,8 +67,10 @@ export async function getCaso(numeroCaso) {
 }
 
 // Variante pública para la página de seguimiento del estudiante (sin token).
-export async function getCasoPublico(numeroCaso) {
-  const caso = await request(`/casos/numero/${numeroCaso}`, { publica: true });
+// El backend exige número + código en cada acceso anónimo.
+export async function getCasoPublico(numeroCaso, codigo) {
+  const query = codigo ? `?${new URLSearchParams({ codigo })}` : '';
+  const caso = await request(`/casos/numero/${numeroCaso}${query}`, { publica: true });
   return normalizarCaso(caso);
 }
 
@@ -161,26 +163,27 @@ export async function agregarComentario(numeroCaso, { texto, visible_para_estudi
   return getCaso(numeroCaso);
 }
 
-export async function agregarComentarioPublico(numeroCaso, { texto, visible_para_estudiante, autor }) {
-  const { db_id } = await getCasoPublico(numeroCaso);
+export async function agregarComentarioPublico(numeroCaso, { texto, visible_para_estudiante, autor }, codigo) {
+  const { db_id } = await getCasoPublico(numeroCaso, codigo);
   await request(`/casos/${db_id}/comentarios/`, {
     method: 'POST',
-    body: JSON.stringify({ texto, visible_para_estudiante, autor }),
+    body: JSON.stringify({ texto, visible_para_estudiante, autor, codigo }),
     publica: true,
   });
-  return getCasoPublico(numeroCaso);
+  return getCasoPublico(numeroCaso, codigo);
 }
 
-export async function subirArchivoEstudiante(numeroCaso, archivo) {
-  const { db_id } = await getCasoPublico(numeroCaso);
+export async function subirArchivoEstudiante(numeroCaso, archivo, codigo) {
+  const { db_id } = await getCasoPublico(numeroCaso, codigo);
   const formData = new FormData();
   formData.append('archivo', archivo);
   formData.append('subido_por', 'estudiante');
+  formData.append('codigo', codigo || '');
 
   await request(`/casos/${db_id}/archivos/`, {
     method: 'POST',
     body: formData,
     publica: true,
   });
-  return getCasoPublico(numeroCaso);
+  return getCasoPublico(numeroCaso, codigo);
 }

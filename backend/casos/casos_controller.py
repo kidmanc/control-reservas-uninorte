@@ -1,4 +1,5 @@
 from sqlalchemy.ext.asyncio import AsyncSession
+from fastapi import HTTPException
 
 from casos.create_caso_action import (
     crear_caso_action,
@@ -74,6 +75,12 @@ async def exigir_acceso_caso_por_numero_controller(db: AsyncSession, numero: str
 
 async def exigir_tenedor_caso_controller(db: AsyncSession, caso_id: int, user: dict | None):
     return await exigir_tenedor_caso_action(db, caso_id, user)
+
+
+def exigir_codigo_publico(caso, codigo: str | None) -> None:
+    """El canal anónimo exige número + código en cada acceso."""
+    if (codigo or "").strip().upper() != (caso.codigo_estudiantil or "").strip().upper():
+        raise HTTPException(status_code=404, detail="No encontramos ningún caso con esos datos")
 
 
 async def remitir_caso_controller(

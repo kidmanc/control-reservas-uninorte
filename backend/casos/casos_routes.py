@@ -21,6 +21,7 @@ from casos.casos_controller import (
     actualizar_decision_controller,
     exigir_acceso_caso_controller,
     exigir_acceso_caso_por_numero_controller,
+    exigir_codigo_publico,
     remitir_caso_controller,
 )
 
@@ -100,8 +101,11 @@ async def obtener_caso(
     caso_id: int,
     db: AsyncSession = Depends(get_db),
     user: dict | None = Depends(get_current_user_optional),
+    codigo: str | None = None,
 ):
     caso = await exigir_acceso_caso_controller(db, caso_id, user)
+    if user is None:
+        exigir_codigo_publico(caso, codigo)
     return _vista_publica(db, caso, user)
 
 
@@ -110,8 +114,11 @@ async def obtener_caso_por_numero(
     numero: str,
     db: AsyncSession = Depends(get_db),
     user: dict | None = Depends(get_current_user_optional),
+    codigo: str | None = None,
 ):
     caso = await exigir_acceso_caso_por_numero_controller(db, numero, user)
+    if user is None:
+        exigir_codigo_publico(caso, codigo)
     return _vista_publica(db, caso, user)
 
 

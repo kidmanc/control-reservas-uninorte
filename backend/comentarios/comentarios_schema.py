@@ -7,6 +7,8 @@ class ComentarioCreate(BaseModel):
     texto: str
     autor: str
     visible_para_estudiante: bool = True
+    # Código estudiantil: obligatorio solo en el canal público anónimo.
+    codigo: str | None = None
 
 
 class ComentarioResponse(BaseModel):

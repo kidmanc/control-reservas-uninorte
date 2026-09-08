@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from main import get_db
 from auth.auth_routes import get_current_user
 from config import settings
-from casos.casos_controller import exigir_acceso_caso_controller
+from casos.casos_controller import exigir_acceso_caso_controller, obtener_caso_controller, exigir_codigo_publico
 from archivos.storage import guardar_archivo
 from archivos.archivos_schema import ArchivoResponse
 from archivos.archivos_controller import (
@@ -26,12 +26,15 @@ async def subir_archivo(
     archivo: UploadFile = File(...),
     subido_por: str = Form("estudiante"),
     descripcion: str | None = Form(None),
+    codigo: str | None = Form(None),
     db: AsyncSession = Depends(get_db),
 ):
     if subido_por not in {"estudiante", "tercero"}:
         raise HTTPException(status_code=400, detail="Origen de archivo inválido")
 
     await validar_carga_estudiante_controller(db, caso_id)
+    caso = await obtener_caso_controller(db, caso_id)
+    exigir_codigo_publico(caso, codigo)
     ruta = await guardar_archivo(archivo)
 
     data = {

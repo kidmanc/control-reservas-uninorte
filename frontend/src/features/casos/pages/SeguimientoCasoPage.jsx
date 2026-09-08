@@ -8,6 +8,7 @@ import { ESTADOS, ESTADOS_FINALES } from '../constants';
 import '../../casos/pages/FormularioCasoPage.css';
 import './DetalleCasoPage.css';
 import './SeguimientoCasoPage.css';
+import './ConsultaCasoPage.css';
 
 function formatFecha(iso) {
   return new Date(iso).toLocaleString('es-CO', { timeZone: 'America/Bogota', day: 'numeric', month: 'long', hour: 'numeric', minute: '2-digit' });
@@ -39,24 +40,74 @@ export default function SeguimientoCasoPage() {
   const [respuesta, setRespuesta] = useState('');
   const [enviandoRespuesta, setEnviandoRespuesta] = useState(false);
   const [subiendoArchivo, setSubiendoArchivo] = useState(false);
+  // Puerta de acceso: el código se guarda solo en esta pestaña.
+  const [codigo, setCodigo] = useState('');
+  const [codigoInput, setCodigoInput] = useState('');
+  const [verificado, setVerificado] = useState(false);
+  const [verificando, setVerificando] = useState(false);
 
-  const cargar = useCallback(async () => {
-    setCargando(true);
-    try {
-      const data = await getCasoPublico(id);
-      setCaso(data);
-      setErrorCarga(null);
-    } catch (err) {
-      setErrorCarga(err.message || 'No se pudo cargar el caso.');
-    } finally {
-      setCargando(false);
-    }
-  }, [id]);
+  const claveSesion = `seguimiento:${id}`;
+
+  const cargar = useCallback(
+    async (cod) => {
+      setCargando(true);
+      try {
+        const data = await getCasoPublico(id, cod);
+        setCaso(data);
+        setErrorCarga(null);
+        return true;
+      } catch (err) {
+        setErrorCarga(err.message || 'No se pudo cargar el caso.');
+        return false;
+      } finally {
+        setCargando(false);
+      }
+    },
+    [id],
+  );
 
   useEffect(() => {
-    setCargando(true);
-    cargar();
-  }, [cargar]);
+    const guardado = sessionStorage.getItem(claveSesion);
+    if (guardado) {
+      setCodigo(guardado);
+      setVerificado(true);
+      cargar(guardado).then((ok) => {
+        if (!ok) {
+          sessionStorage.removeItem(claveSesion);
+          setCodigo('');
+          setVerificado(false);
+        }
+      });
+    } else {
+      setCargando(false);
+    }
+  }, [id, claveSesion, cargar]);
+
+  async function onVerificar(e) {
+    if (e) e.preventDefault();
+    const cod = codigoInput.trim();
+    if (!cod || verificando) return;
+    setVerificando(true);
+    setErrorCarga(null);
+    try {
+      const data = await getCasoPublico(id, cod);
+      sessionStorage.setItem(claveSesion, cod);
+      setCodigo(cod);
+      setCaso(data);
+      setVerificado(true);
+    } catch (err) {
+      setErrorCarga(err.message || 'No encontramos ningún caso con esos datos.');
+    } finally {
+      setVerificando(false);
+    }
+  }
+
+  function expulsar(mensaje) {
+    sessionStorage.removeItem(claveSesion);
+    setCodigo('');
+    setVerificado(false);
+    setErrorCarga(mensaje);
+  }
 
   async function onEnviarRespuesta() {
     if (!respuesta.trim()) return;
@@ -64,15 +115,23 @@ export default function SeguimientoCasoPage() {
     setErrorAccion(null);
     try {
       // Todo lo que escribe el estudiante/tercero queda visible para Tesorería por definición.
-      const actualizado = await agregarComentarioPublico(id, {
-        texto: respuesta.trim(),
-        visible_para_estudiante: true,
-        autor: caso.tercero ? caso.tercero.nombre_completo : caso.nombre_completo,
-      });
+      const actualizado = await agregarComentarioPublico(
+        id,
+        {
+          texto: respuesta.trim(),
+          visible_para_estudiante: true,
+          autor: caso.tercero ? caso.tercero.nombre_completo : caso.nombre_completo,
+        },
+        codigo,
+      );
       setCaso(actualizado);
       setRespuesta('');
     } catch (err) {
-      setErrorAccion(err.message || 'No se pudo enviar la respuesta.');
+      if (err.message && err.message.includes('No encontramos')) {
+        expulsar('Tu acceso venció o el código cambió. Ingrésalo de nuevo.');
+      } else {
+        setErrorAccion(err.message || 'No se pudo enviar la respuesta.');
+      }
     } finally {
       setEnviandoRespuesta(false);
     }
@@ -85,10 +144,14 @@ export default function SeguimientoCasoPage() {
     setSubiendoArchivo(true);
     setErrorAccion(null);
     try {
-      const actualizado = await subirArchivoEstudiante(id, archivo);
+      const actualizado = await subirArchivoEstudiante(id, archivo, codigo);
       setCaso(actualizado);
     } catch (err) {
-      setErrorAccion(err.message || 'No se pudo subir el archivo.');
+      if (err.message && err.message.includes('No encontramos')) {
+        expulsar('Tu acceso venció o el código cambió. Ingrésalo de nuevo.');
+      } else {
+        setErrorAccion(err.message || 'No se pudo subir el archivo.');
+      }
     } finally {
       setSubiendoArchivo(false);
     }
@@ -99,6 +162,33 @@ export default function SeguimientoCasoPage() {
       <div className="student-page">
         <StudentHeader />
         <p className="loading-state">Cargando tu solicitud…</p>
+      </div>
+    );
+  }
+
+  if (!verificado) {
+    return (
+      <div className="student-page">
+        <StudentHeader />
+        <form className="student-container consulta-card" onSubmit={onVerificar}>
+          <h1>Ver tu solicitud {id}</h1>
+          <p>
+            Por seguridad, ingresa tu <strong>código estudiantil</strong> para ver este caso.
+          </p>
+          <div className="field">
+            <label>Código estudiantil</label>
+            <input
+              type="text"
+              placeholder="Ej. 200145632"
+              value={codigoInput}
+              onChange={(e) => setCodigoInput(e.target.value)}
+            />
+          </div>
+          {errorCarga && <p className="form-error">{errorCarga}</p>}
+          <button type="submit" className="btn-primary" disabled={verificando || !codigoInput.trim()}>
+            {verificando ? 'Verificando…' : 'Ver mi solicitud'}
+          </button>
+        </form>
       </div>
     );
   }
