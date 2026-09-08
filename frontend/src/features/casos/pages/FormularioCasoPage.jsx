@@ -72,6 +72,7 @@ export default function FormularioCasoPage() {
   const [casoCreado, setCasoCreado] = useState(null);
   // null = catálogo sin cargar (se usan los valores fijos).
   const [catalogos, setCatalogos] = useState(null);
+  const [catalogoError, setCatalogoError] = useState(false);
   // Período calculado por fecha (anterior, actual, siguiente): nadie lo administra.
   const [periodos] = useState(() => periodosCercanos());
 
@@ -88,13 +89,14 @@ export default function FormularioCasoPage() {
           const validos = programasVisibles(lista, f.nivel_academico);
           return {
             ...f,
-            programa_academico: validos.includes(f.programa_academico)
-              ? f.programa_academico
-              : validos[0] || f.programa_academico,
-          };
-        });
+          programa_academico: validos.includes(f.programa_academico)
+            ? f.programa_academico
+            : validos[0] || f.programa_academico,
+        };
       })
-      .catch(() => {});
+      .catch(() => {
+        setCatalogoError(true);
+      });
   }, []);
 
   function onCambiarNivel(nivel) {
@@ -431,6 +433,12 @@ export default function FormularioCasoPage() {
                   </option>
                 ))}
               </select>
+              {catalogoError && (
+                <span className="hint" style={{ color: 'var(--rechazado)' }}>
+                  Sin conexión con el catálogo: se muestran los programas fijos. Verifica que el backend esté
+                  actualizado, reiniciado y con seed.
+                </span>
+              )}
             </div>
             <div className="field">
               <label>Programa académico</label>
