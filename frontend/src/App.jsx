@@ -2,12 +2,14 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './features/auth/AuthContext';
 import ProtectedRoute from './features/auth/ProtectedRoute';
 import AdminRoute from './features/auth/AdminRoute';
+import StaffRoute from './features/auth/StaffRoute';
 import FormularioCasoPage from './features/casos/pages/FormularioCasoPage';
 import ListaCasosPage from './features/casos/pages/ListaCasosPage';
 import DetalleCasoPage from './features/casos/pages/DetalleCasoPage';
 import SeguimientoCasoPage from './features/casos/pages/SeguimientoCasoPage';
 import LoginPage from './features/auth/pages/LoginPage';
 import UsuariosPage from './features/usuarios/pages/UsuariosPage';
+import ReportesPage from './features/reportes/pages/ReportesPage';
 
 export default function App() {
   return (
@@ -52,8 +54,16 @@ export default function App() {
               </AdminRoute>
             }
           />
+          <Route
+            path="/panel/reportes"
+            element={
+              <StaffRoute>
+                <ReportesPage />
+              </StaffRoute>
+            }
+          />
 
-          {/* TODO: rutas de "Tipos de solicitud", "Reportes" y "Configuración" */}
+          {/* TODO: rutas de "Tipos de solicitud" y "Configuración" */}
         </Routes>
       </AuthProvider>
     </BrowserRouter>
