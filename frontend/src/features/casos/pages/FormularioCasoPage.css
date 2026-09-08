@@ -60,6 +60,19 @@
 .field textarea { resize: vertical; min-height: 110px; font-family: var(--font-body); line-height: 1.5; }
 .field input::placeholder, .field textarea::placeholder { color: #b3ada2; }
 
+.consulta-link {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--azul);
+  text-decoration: none;
+  margin-top: 12px;
+  display: inline-block;
+}
+
+.consulta-link:hover {
+  text-decoration: underline;
+}
+
 .filler-toggle { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 26px; }
 .filler-option {
   display: flex; align-items: flex-start; gap: 12px; padding: 16px 18px;

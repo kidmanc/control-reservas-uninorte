@@ -255,6 +255,9 @@ export default function FormularioCasoPage() {
             <strong>devolución</strong> que requieran soporte documental. Un miembro de Tesorería revisará tu caso y
             podrás dar seguimiento al estado en cualquier momento desde el enlace que recibirás por correo.
           </p>
+          <Link className="consulta-link" to="/seguimiento">
+            ¿Ya enviaste una solicitud? Consulta el estado de tu caso →
+          </Link>
 
           <div className="scope-note">
             <div className="icon-wrap">

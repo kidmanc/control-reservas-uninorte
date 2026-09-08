@@ -72,6 +72,13 @@ export async function getCasoPublico(numeroCaso) {
   return normalizarCaso(caso);
 }
 
+// Búsqueda pública por número + código estudiantil (página de consulta).
+export async function buscarCasoPublico(numero, codigo) {
+  const params = new URLSearchParams({ numero, codigo });
+  const caso = await request(`/casos/seguimiento/buscar?${params.toString()}`, { publica: true });
+  return normalizarCaso(caso);
+}
+
 export async function crearCaso(payload) {
   const body = {
     nombre_completo: payload.nombre_completo,

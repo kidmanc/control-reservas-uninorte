@@ -1,0 +1,37 @@
+.consulta-card {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  max-width: 520px;
+}
+
+.consulta-card h1 {
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.consulta-card p {
+  font-size: 14px;
+  color: var(--text-secondary);
+  line-height: 1.55;
+}
+
+.consulta-card .btn-primary {
+  align-self: flex-start;
+  padding: 12px 28px;
+  margin-top: 4px;
+}
+
+.consulta-link {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--azul);
+  text-decoration: none;
+  margin-top: 6px;
+  display: inline-block;
+}
+
+.consulta-link:hover {
+  text-decoration: underline;
+}

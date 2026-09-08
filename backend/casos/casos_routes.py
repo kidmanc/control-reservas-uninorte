@@ -16,6 +16,7 @@ from casos.casos_controller import (
     crear_caso_controller,
     listar_casos_controller,
     listar_participados_controller,
+    obtener_caso_por_numero_controller,
     cambiar_estado_controller,
     actualizar_decision_controller,
     exigir_acceso_caso_controller,
@@ -72,6 +73,26 @@ def _bloquear_operador_escritura(user: dict, accion: str):
             status_code=403,
             detail=f"Los revisores y el Centro Médico solo pueden consultar y comentar los casos. {accion} no les corresponde.",
         )
+
+
+@router.get("/seguimiento/buscar", response_model=CasoDetalle)
+async def buscar_para_seguimiento(
+    numero: str,
+    codigo: str,
+    db: AsyncSession = Depends(get_db),
+):
+    """Localiza el caso del estudiante verificando número + código estudiantil.
+
+    Público y sin login: el código evita que cualquiera adivine números
+    consecutivos. Mensaje genérico para no revelar qué dato falló.
+    """
+    caso = await obtener_caso_por_numero_controller(db, numero)
+    if (
+        not caso
+        or (caso.codigo_estudiantil or "").strip().upper() != (codigo or "").strip().upper()
+    ):
+        raise HTTPException(status_code=404, detail="No encontramos ningún caso con esos datos")
+    return _vista_publica(db, caso, None)
 
 
 @router.get("/{caso_id}", response_model=CasoDetalle)

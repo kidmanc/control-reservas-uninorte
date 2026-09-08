@@ -20,7 +20,7 @@ El caso siempre está **en manos de una sola persona**. Los pasos válidos son:
 | **Revisor de detalle** | Sus casos en mano + los que ya revisó (una sola lista) | Comentar sus casos; enviar a Aprobación final; devolver a Tesorería **con correcciones** (motivo obligatorio) | Cambiar estados; registrar decisiones; ver casos ajenos |
 | **Centro Médico** | Sus casos en mano + los que ya revisó (una sola lista) | Comentar sus casos; **aprobar** documentos o **rechazarlos** con motivo | Cambiar estados; registrar decisiones; enviar a otro paso |
 | **Aprobador final** | Sus casos en mano + los que ya revisó (una sola lista) | Fijar **aprobado/rechazado** (exige porcentaje y, si es devolución, destino); fijar porcentaje y destino; devolver **a quien se lo envió** con correcciones (motivo obligatorio) | Cambiar estados no finales; aprobar sin porcentaje; ver casos ajenos |
-| **Estudiante / tercero** (canal público, sin login) | Solo su caso con el enlace | Comentar; adjuntar documentos cuando se le piden; ver su trazabilidad con hora de Colombia | Todo lo demás |
+| **Estudiante / tercero** (canal público, sin login) | Solo su caso con el enlace | Consultar con número + código, comentar, adjuntar documentos cuando se le piden, ver trazabilidad con hora de Colombia | Todo lo demás |
 
 ## Devoluciones
 

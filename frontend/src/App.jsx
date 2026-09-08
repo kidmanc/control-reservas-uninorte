@@ -7,6 +7,7 @@ import FormularioCasoPage from './features/casos/pages/FormularioCasoPage';
 import ListaCasosPage from './features/casos/pages/ListaCasosPage';
 import DetalleCasoPage from './features/casos/pages/DetalleCasoPage';
 import SeguimientoCasoPage from './features/casos/pages/SeguimientoCasoPage';
+import ConsultaCasoPage from './features/casos/pages/ConsultaCasoPage';
 import LoginPage from './features/auth/pages/LoginPage';
 import UsuariosPage from './features/usuarios/pages/UsuariosPage';
 import ReportesPage from './features/reportes/pages/ReportesPage';
@@ -19,6 +20,7 @@ export default function App() {
         <Routes>
           {/* Vistas públicas */}
           <Route path="/" element={<FormularioCasoPage />} />
+          <Route path="/seguimiento" element={<ConsultaCasoPage />} />
           <Route path="/seguimiento/:id" element={<SeguimientoCasoPage />} />
           <Route path="/login" element={<LoginPage />} />
 
