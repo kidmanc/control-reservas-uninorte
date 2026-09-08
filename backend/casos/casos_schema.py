@@ -21,6 +21,14 @@ class CasoBase(BaseModel):
     periodo_academico: str
     motivo: str
 
+    @field_validator("periodo_academico")
+    @classmethod
+    def validar_periodo_academico(cls, periodo: str) -> str:
+        periodo_normalizado = periodo.strip()
+        if not re.fullmatch(r"\d{4}-(10|20)", periodo_normalizado):
+            raise ValueError("El período académico debe tener el formato AAAA-10 o AAAA-20")
+        return periodo_normalizado
+
     @field_validator("correo_institucional")
     @classmethod
     def validar_correo_institucional(cls, correo: str) -> str:

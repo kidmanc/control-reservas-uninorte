@@ -4,12 +4,12 @@ import PanelSidebar from '../../../components/layout/PanelSidebar';
 import { IconBack } from '../../../components/ui/icons';
 import { crearCaso } from '../api/casosApi';
 import { listarCatalogos } from '../../configuracion/api/catalogosApi';
+import { periodoAcademicoDeFecha, periodosCercanos } from '../periodoAcademico';
 import { TIPOS_SOLICITUD, TIPO_SOLICITUD_LABEL, PARENTESCOS, NIVELES_ACADEMICOS, NIVEL_ACADEMICO_LABEL } from '../constants';
 import { IconClock, IconInfo, IconUsers, IconUpload, IconCheckCircle, IconFile, IconArrowRight } from '../../../components/ui/icons';
 import './FormularioCasoPage.css';
 
 const PROGRAMAS_DEFECTO = ['Ingeniería de Sistemas', 'Administración de Empresas', 'Derecho', 'Ingeniería Industrial', 'Psicología', 'Ingeniería Electrónica'];
-const PERIODOS_DEFECTO = ['2026-10', '2026-20'];
 
 const ESTADO_INICIAL = {
   esTercero: false,
@@ -21,7 +21,7 @@ const ESTADO_INICIAL = {
   tipo_solicitud: '',
   nivel_academico: 'pregrado',
   programa_academico: PROGRAMAS_DEFECTO[0],
-  periodo_academico: PERIODOS_DEFECTO[0],
+  periodo_academico: '',
   motivo: '',
   descripcion_adjuntos: '',
   archivos: [],
@@ -31,34 +31,31 @@ const ESTADO_INICIAL = {
 export default function FormularioCasoPage() {
   const location = useLocation();
   const esPanel = location.pathname.startsWith('/panel');
-  const [form, setForm] = useState(ESTADO_INICIAL);
+  const [form, setForm] = useState(() => ({ ...ESTADO_INICIAL, periodo_academico: periodoAcademicoDeFecha() }));
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState(null);
   const [casoCreado, setCasoCreado] = useState(null);
-  const [catalogos, setCatalogos] = useState({ programas: [], periodos: [] });
+  const [catalogos, setCatalogos] = useState({ programas: [] });
+  // Período calculado por fecha (anterior, actual, siguiente): nadie lo administra.
+  const [periodos] = useState(() => periodosCercanos());
 
-  // Catálogos administrables (con valores fijos si el backend no responde).
+  // Catálogo de programas administrable (con valores fijos si el backend no responde).
   useEffect(() => {
     listarCatalogos()
       .then((items) => {
         const programas = items.filter((x) => x.tipo === 'programa').map((x) => x.valor);
-        const periodos = items.filter((x) => x.tipo === 'periodo').map((x) => x.valor);
-        setCatalogos({ programas, periodos });
+        setCatalogos({ programas });
         setForm((f) => ({
           ...f,
           programa_academico: programas.includes(f.programa_academico)
             ? f.programa_academico
             : programas[0] || f.programa_academico,
-          periodo_academico: periodos.includes(f.periodo_academico)
-            ? f.periodo_academico
-            : periodos[0] || f.periodo_academico,
         }));
       })
       .catch(() => {});
   }, []);
 
   const programas = catalogos.programas.length > 0 ? catalogos.programas : PROGRAMAS_DEFECTO;
-  const periodos = catalogos.periodos.length > 0 ? catalogos.periodos : PERIODOS_DEFECTO;
 
   function set(campo, valor) {
     setForm((f) => ({ ...f, [campo]: valor }));

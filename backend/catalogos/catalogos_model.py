@@ -3,7 +3,8 @@ from sqlalchemy import Column, Integer, String, Boolean, UniqueConstraint
 from main import Base
 
 # Tipos de catálogo administrables desde Configuración.
-TIPOS_CATALOGO = {"programa", "periodo"}
+# El período académico NO es catálogo: se calcula por fecha (ver frontend).
+TIPOS_CATALOGO = {"programa"}
 
 
 class Catalogo(Base):

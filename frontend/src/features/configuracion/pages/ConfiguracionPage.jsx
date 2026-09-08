@@ -149,7 +149,6 @@ function Catalogos() {
   const [cargando, setCargando] = useState(true);
   const [errorCarga, setErrorCarga] = useState(null);
   const [nuevoPrograma, setNuevoPrograma] = useState('');
-  const [nuevoPeriodo, setNuevoPeriodo] = useState('');
   const [errorAccion, setErrorAccion] = useState(null);
   const [guardando, setGuardando] = useState(false);
 
@@ -222,7 +221,7 @@ function Catalogos() {
       <h2 className="card-title">
         <IconCheckCircle /> Catálogos del formulario
       </h2>
-      <p className="empty-hint">Solo la tesorera. Lo oculto no sale en el formulario; eliminar no afecta casos existentes.</p>
+      <p className="empty-hint">Solo la tesorera. El período académico no se administra: se calcula por fecha.</p>
 
       {errorAccion && <div className="form-error" style={{ marginBottom: 16 }}>{errorAccion}</div>}
       {cargando && <div className="empty-row">Cargando catálogos…</div>}
@@ -233,22 +232,10 @@ function Catalogos() {
           <BloqueCatalogo
             tipo="programa"
             titulo="Programas académicos"
-            hint="Opciones del campo Programa académico en el formulario."
+            hint="Opciones del campo Programa académico en el formulario. Lo oculto no sale; eliminar no afecta casos existentes."
             items={valoresDe('programa')}
             nuevo={nuevoPrograma}
             setNuevo={setNuevoPrograma}
-            guardando={guardando}
-            onAgregar={onAgregar}
-            onToggle={onToggle}
-            onEliminar={onEliminar}
-          />
-          <BloqueCatalogo
-            tipo="periodo"
-            titulo="Períodos académicos"
-            hint="Opciones del campo Período académico en el formulario."
-            items={valoresDe('periodo')}
-            nuevo={nuevoPeriodo}
-            setNuevo={setNuevoPeriodo}
             guardando={guardando}
             onAgregar={onAgregar}
             onToggle={onToggle}

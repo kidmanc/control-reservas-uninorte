@@ -76,7 +76,7 @@ async def eliminar_catalogo_action(db: AsyncSession, item_id: int) -> bool:
 
 
 async def sembrar_catalogos_action(db: AsyncSession) -> int:
-    """Valores iniciales (programas y períodos del formulario actual)."""
+    """Valores iniciales (programas del formulario actual)."""
     iniciales = {
         "programa": [
             "Ingeniería de Sistemas",
@@ -86,7 +86,6 @@ async def sembrar_catalogos_action(db: AsyncSession) -> int:
             "Psicología",
             "Ingeniería Electrónica",
         ],
-        "periodo": ["2026-10", "2026-20"],
     }
     creados = 0
     for tipo, valores in iniciales.items():

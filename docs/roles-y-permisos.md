@@ -44,11 +44,11 @@ El caso siempre está **en manos de una sola persona**. Los pasos válidos son:
 
 - El enlace del estudiante es público por diseño (como un número de guía): muestra el caso, sus archivos, su trazabilidad y solo los comentarios visibles. Los comentarios internos nunca se exponen sin login.
 - Desactivar un usuario invalida su sesión de inmediato (además de impedirle entrar).
-- Todas las fechas se muestran en **hora de Colombia** (el backend emite UTC y el frontend convierte).
 
 ## Notas
 
 - Cada operador ve **una sola lista**: sus casos en mano primero y luego los que ya revisó (la columna Asignado muestra quién tiene cada caso). Los filtros aplican a todo.
 - Los casos movidos antes de existir el historial se registran automáticamente al iniciar el backend (backfill idempotente).
 - Todas las fechas se muestran en **hora de Colombia** (el backend emite UTC y el frontend convierte).
+- El período académico se calcula por fecha (ene–jun → `AAAA-10`, jul–dic → `AAAA-20`); nadie lo administra. Si el corte real es otro mes, se ajusta en `periodoAcademico.js`.
 - Cuentas de ejemplo para desarrollo (contraseña `password123`): se crean con `python seed.py` y la tesorera las reemplaza por las reales en Gestión de usuarios.
