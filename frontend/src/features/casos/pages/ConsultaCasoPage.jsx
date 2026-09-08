@@ -23,6 +23,8 @@ export default function ConsultaCasoPage() {
     setBuscando(true);
     try {
       const caso = await buscarCasoPublico(numero.trim(), codigo.trim());
+      // Pasar la verificación a la página de seguimiento (misma pestaña).
+      sessionStorage.setItem(`seguimiento:${caso.id}`, codigo.trim());
       navigate(`/seguimiento/${caso.id}`);
     } catch (err) {
       setError(err.message || 'No encontramos ningún caso con esos datos.');
