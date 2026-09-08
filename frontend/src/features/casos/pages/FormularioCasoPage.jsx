@@ -89,10 +89,11 @@ export default function FormularioCasoPage() {
           const validos = programasVisibles(lista, f.nivel_academico);
           return {
             ...f,
-          programa_academico: validos.includes(f.programa_academico)
-            ? f.programa_academico
-            : validos[0] || f.programa_academico,
-        };
+            programa_academico: validos.includes(f.programa_academico)
+              ? f.programa_academico
+              : validos[0] || f.programa_academico,
+          };
+        });
       })
       .catch(() => {
         setCatalogoError(true);
