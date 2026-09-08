@@ -14,6 +14,11 @@ class UsuarioUpdate(BaseModel):
     activo: bool | None = None
 
 
+class ContrasenaUpdate(BaseModel):
+    actual: str = Field(min_length=1, max_length=128)
+    nueva: str = Field(min_length=8, max_length=128)
+
+
 class UsuarioResponse(BaseModel):
     id: int
     nombre: str

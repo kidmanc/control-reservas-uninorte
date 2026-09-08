@@ -5,7 +5,7 @@ import './PanelSidebar.css';
 const NAV_ITEMS = [
   { to: '/panel', label: 'Casos', end: true },
   { to: '/panel/reportes', label: 'Reportes', staffOnly: true },
-  { to: '/panel/configuracion', label: 'Configuración', staffOnly: true },
+  { to: '/panel/configuracion', label: 'Configuración' },
   { to: '/panel/usuarios', label: 'Usuarios', adminOnly: true },
 ];
 

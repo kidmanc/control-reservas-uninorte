@@ -257,6 +257,7 @@ from comentarios.comentarios_routes import router as comentarios_router
 from archivos.archivos_routes import router as archivos_router
 from historial.historial_routes import router as historial_router
 from reportes.reportes_routes import router as reportes_router
+from catalogos.catalogos_routes import router as catalogos_router
 
 app.include_router(auth_router)
 app.include_router(usuarios_router)
@@ -265,6 +266,7 @@ app.include_router(comentarios_router)
 app.include_router(archivos_router)
 app.include_router(historial_router)
 app.include_router(reportes_router)
+app.include_router(catalogos_router)
 
 
 @app.get("/health")

@@ -5,6 +5,7 @@ from usuarios.create_usuario_action import (
     listar_usuarios_action,
     listar_destinatarios_action,
     actualizar_usuario_action,
+    cambiar_contrasena_action,
 )
 
 
@@ -22,3 +23,7 @@ async def crear_usuario_controller(db: AsyncSession, data: dict):
 
 async def actualizar_usuario_controller(db: AsyncSession, usuario_id: int, data: dict, actor_id: int | None = None):
     return await actualizar_usuario_action(db, usuario_id, data, actor_id)
+
+
+async def cambiar_contrasena_controller(db: AsyncSession, usuario_id: int, actual: str, nueva: str):
+    return await cambiar_contrasena_action(db, usuario_id, actual, nueva)

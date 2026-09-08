@@ -1,14 +1,15 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import PanelSidebar from '../../../components/layout/PanelSidebar';
 import { IconBack } from '../../../components/ui/icons';
 import { crearCaso } from '../api/casosApi';
+import { listarCatalogos } from '../../configuracion/api/catalogosApi';
 import { TIPOS_SOLICITUD, TIPO_SOLICITUD_LABEL, PARENTESCOS, NIVELES_ACADEMICOS, NIVEL_ACADEMICO_LABEL } from '../constants';
 import { IconClock, IconInfo, IconUsers, IconUpload, IconCheckCircle, IconFile, IconArrowRight } from '../../../components/ui/icons';
 import './FormularioCasoPage.css';
 
-const PROGRAMAS = ['Ingeniería de Sistemas', 'Administración de Empresas', 'Derecho', 'Ingeniería Industrial', 'Psicología', 'Ingeniería Electrónica'];
-const PERIODOS = ['2026-10', '2026-20'];
+const PROGRAMAS_DEFECTO = ['Ingeniería de Sistemas', 'Administración de Empresas', 'Derecho', 'Ingeniería Industrial', 'Psicología', 'Ingeniería Electrónica'];
+const PERIODOS_DEFECTO = ['2026-10', '2026-20'];
 
 const ESTADO_INICIAL = {
   esTercero: false,
@@ -19,8 +20,8 @@ const ESTADO_INICIAL = {
   telefono_contacto: '',
   tipo_solicitud: '',
   nivel_academico: 'pregrado',
-  programa_academico: PROGRAMAS[0],
-  periodo_academico: PERIODOS[0],
+  programa_academico: PROGRAMAS_DEFECTO[0],
+  periodo_academico: PERIODOS_DEFECTO[0],
   motivo: '',
   descripcion_adjuntos: '',
   archivos: [],
@@ -34,6 +35,30 @@ export default function FormularioCasoPage() {
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState(null);
   const [casoCreado, setCasoCreado] = useState(null);
+  const [catalogos, setCatalogos] = useState({ programas: [], periodos: [] });
+
+  // Catálogos administrables (con valores fijos si el backend no responde).
+  useEffect(() => {
+    listarCatalogos()
+      .then((items) => {
+        const programas = items.filter((x) => x.tipo === 'programa').map((x) => x.valor);
+        const periodos = items.filter((x) => x.tipo === 'periodo').map((x) => x.valor);
+        setCatalogos({ programas, periodos });
+        setForm((f) => ({
+          ...f,
+          programa_academico: programas.includes(f.programa_academico)
+            ? f.programa_academico
+            : programas[0] || f.programa_academico,
+          periodo_academico: periodos.includes(f.periodo_academico)
+            ? f.periodo_academico
+            : periodos[0] || f.periodo_academico,
+        }));
+      })
+      .catch(() => {});
+  }, []);
+
+  const programas = catalogos.programas.length > 0 ? catalogos.programas : PROGRAMAS_DEFECTO;
+  const periodos = catalogos.periodos.length > 0 ? catalogos.periodos : PERIODOS_DEFECTO;
 
   function set(campo, valor) {
     setForm((f) => ({ ...f, [campo]: valor }));
@@ -362,7 +387,7 @@ export default function FormularioCasoPage() {
             <div className="field">
               <label>Programa académico</label>
               <select value={form.programa_academico} onChange={(e) => set('programa_academico', e.target.value)}>
-                {PROGRAMAS.map((p) => (
+                {programas.map((p) => (
                   <option key={p}>{p}</option>
                 ))}
               </select>
@@ -370,7 +395,7 @@ export default function FormularioCasoPage() {
             <div className="field">
               <label>Período académico</label>
               <select value={form.periodo_academico} onChange={(e) => set('periodo_academico', e.target.value)}>
-                {PERIODOS.map((p) => (
+                {periodos.map((p) => (
                   <option key={p}>{p}</option>
                 ))}
               </select>

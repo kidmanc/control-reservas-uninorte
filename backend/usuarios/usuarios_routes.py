@@ -3,12 +3,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from main import get_db
 from auth.auth_routes import get_current_user
-from usuarios.usuarios_schema import UsuarioCreate, UsuarioUpdate, UsuarioResponse
+from usuarios.usuarios_schema import UsuarioCreate, UsuarioUpdate, UsuarioResponse, ContrasenaUpdate
 from usuarios.usuarios_controller import (
     crear_usuario_controller,
     listar_usuarios_controller,
     listar_destinatarios_controller,
     actualizar_usuario_controller,
+    cambiar_contrasena_controller,
 )
 
 router = APIRouter(prefix="/api/usuarios", tags=["usuarios"])
@@ -38,6 +39,17 @@ async def listar_usuarios(db: AsyncSession = Depends(get_db), user: dict = Depen
 async def crear_usuario(request: UsuarioCreate, db: AsyncSession = Depends(get_db), user: dict = Depends(get_current_user)):
     _exigir_admin(user)
     return await crear_usuario_controller(db, request.model_dump())
+
+
+@router.patch("/yo/contrasena")
+async def cambiar_mi_contrasena(
+    request: ContrasenaUpdate,
+    db: AsyncSession = Depends(get_db),
+    user: dict = Depends(get_current_user),
+):
+    """Cambia la contraseña propia verificando la actual."""
+    await cambiar_contrasena_controller(db, user["id"], request.actual, request.nueva)
+    return {"ok": True}
 
 
 @router.patch("/{usuario_id}", response_model=UsuarioResponse)

@@ -3,7 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi import HTTPException
 
 from usuarios.usuarios_model import Usuario
-from auth.login_action import hash_contrasena
+from auth.login_action import hash_contrasena, verificar_contrasena
 
 # Roles permitidos al crear usuarios desde el panel (rol de destino)
 ROLES_PERMITIDOS = {"asistente_tesoreria", "admin", "revisor", "centro_medico", "aprobador"}
@@ -50,6 +50,19 @@ async def crear_usuario_action(db: AsyncSession, data: dict) -> Usuario:
     await db.commit()
     await db.refresh(usuario)
     return usuario
+
+
+async def cambiar_contrasena_action(db: AsyncSession, usuario_id: int, actual: str, nueva: str) -> None:
+    """Cambia la contraseña propia verificando la actual."""
+    usuario = await db.get(Usuario, usuario_id)
+    if not usuario:
+        raise HTTPException(status_code=404, detail="Usuario no encontrado")
+    if not verificar_contrasena(actual, usuario.contrasena_hash):
+        raise HTTPException(status_code=400, detail="La contraseña actual no es correcta")
+    if verificar_contrasena(nueva, usuario.contrasena_hash):
+        raise HTTPException(status_code=400, detail="La nueva contraseña debe ser diferente a la actual")
+    usuario.contrasena_hash = hash_contrasena(nueva)
+    await db.commit()
 
 
 async def actualizar_usuario_action(db: AsyncSession, usuario_id: int, data: dict, actor_id: int | None = None) -> Usuario | None:

@@ -10,6 +10,7 @@ import SeguimientoCasoPage from './features/casos/pages/SeguimientoCasoPage';
 import LoginPage from './features/auth/pages/LoginPage';
 import UsuariosPage from './features/usuarios/pages/UsuariosPage';
 import ReportesPage from './features/reportes/pages/ReportesPage';
+import ConfiguracionPage from './features/configuracion/pages/ConfiguracionPage';
 
 export default function App() {
   return (
@@ -62,8 +63,16 @@ export default function App() {
               </StaffRoute>
             }
           />
+          <Route
+            path="/panel/configuracion"
+            element={
+              <ProtectedRoute>
+                <ConfiguracionPage />
+              </ProtectedRoute>
+            }
+          />
 
-          {/* TODO: rutas de "Tipos de solicitud" y "Configuración" */}
+          {/* TODO: ruta de "Tipos de solicitud" */}
         </Routes>
       </AuthProvider>
     </BrowserRouter>

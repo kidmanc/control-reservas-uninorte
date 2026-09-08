@@ -43,3 +43,10 @@ export async function actualizarUsuario(id, cambios) {
 export async function listarDestinatarios() {
   return request('/usuarios/destinatarios');
 }
+
+export async function cambiarMiContrasena({ actual, nueva }) {
+  return request('/usuarios/yo/contrasena', {
+    method: 'PATCH',
+    body: JSON.stringify({ actual, nueva }),
+  });
+}

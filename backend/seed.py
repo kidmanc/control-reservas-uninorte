@@ -94,6 +94,13 @@ async def seed():
                 print(f"Semilla actualizado: {correo} ({rol})")
         await db.commit()
 
+        # Catálogos iniciales (programas y períodos del formulario).
+        from catalogos.catalogos_controller import sembrar_catalogos_controller
+
+        sembrados = await sembrar_catalogos_controller(db)
+        if sembrados:
+            print(f"Catálogos semilla creados: {sembrados} valores")
+
     await engine.dispose()
 
 
