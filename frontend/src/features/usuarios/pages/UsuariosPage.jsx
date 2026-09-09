@@ -16,7 +16,7 @@ const ESTADO_INICIAL = {
 const ROLES = {
   admin: 'Tesorero (admin)',
   asistente_tesoreria: 'Asistente de Tesorería',
-  revisor: 'Revisor de detalle',
+  revisor: 'Revisor y ejecutor',
   centro_medico: 'Centro Médico',
   aprobador: 'Aprobador final',
 };
@@ -166,7 +166,7 @@ export default function UsuariosPage() {
                 <label htmlFor="rol">Rol</label>
                 <select id="rol" value={form.rol} onChange={(e) => set('rol', e.target.value)}>
                   <option value="asistente_tesoreria">Asistente de Tesorería</option>
-                  <option value="revisor">Revisor de detalle</option>
+                  <option value="revisor">Revisor y ejecutor</option>
                   <option value="centro_medico">Centro Médico</option>
                   <option value="aprobador">Aprobador final</option>
                   <option value="admin">Tesorero (admin)</option>

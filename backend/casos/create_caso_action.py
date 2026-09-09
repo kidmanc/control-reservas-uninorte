@@ -32,7 +32,7 @@ VEREDICTOS_DEVOLUCION = {
 
 # Etiqueta del paso destino para los mensajes de remisión e historial.
 PASO_LABEL = {
-    "revisor": "revisión de detalle",
+    "revisor": "revisión y ejecución",
     "centro_medico": "validación médica",
     "aprobador": "aprobación final",
 }

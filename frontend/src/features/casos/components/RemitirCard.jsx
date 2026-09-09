@@ -6,7 +6,7 @@ import './RemitirCard.css';
 // Refleja la tabla PASOS_FLUJO del backend: tenedor actual -> pasos válidos.
 // El backend impone la tabla; aquí solo se muestran los pasos permitidos.
 const ROL_LABEL = {
-  revisor: 'Revisión de detalle',
+  revisor: 'Revisión y ejecución',
   centro_medico: 'Centro Médico',
   aprobador: 'Aprobación final',
 };
@@ -21,7 +21,7 @@ const ESPERA_POR_ROL = {
 function pasosValidos(tenedor, destinatarios, caso) {
   const rolTenedor = tenedor?.rol || null;
 
-  // En Tesorería: al Centro Médico o a revisión de detalle. Cada paso trae
+  // En Tesorería: al Centro Médico o a revisión y ejecución. Cada paso trae
   // sus candidatos; la opción muestra solo el paso, sin nombres de personas.
   if (rolTenedor === null) {
     const pasos = [];
@@ -72,7 +72,7 @@ function pasosValidos(tenedor, destinatarios, caso) {
     ];
   }
 
-  // Revisión de detalle: la revisión se hace en otra plataforma; aquí solo
+  // Revisión y ejecución: la revisión se hace en otra plataforma; aquí solo
   // confirma que ya ejecutó y envía a aprobación final, o devuelve con correcciones.
   if (rolTenedor === 'revisor') {
     const pasos = [];

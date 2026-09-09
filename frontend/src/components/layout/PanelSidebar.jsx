@@ -12,7 +12,7 @@ const NAV_ITEMS = [
 const ROL_LABEL = {
   admin: 'Tesorero',
   asistente_tesoreria: 'Asistente de Tesorería',
-  revisor: 'Revisor de detalle',
+  revisor: 'Revisor y ejecutor',
   centro_medico: 'Centro Médico',
   aprobador: 'Aprobador final',
 };
