@@ -48,7 +48,16 @@ export default function ListaCasosPage() {
     Promise.all([principal, historial, usuarios])
       .then(([data, hist, dirs]) => {
         if (vigente) {
-          setCasos(esOperador ? [...data, ...hist] : data);
+          // Principal + historial pueden traer el mismo caso dos veces:
+          // se mezclan sin duplicados por número de caso.
+          const vistos = new Set();
+          const unidos = [...data, ...hist].filter((c) => {
+            const clave = c.numero_caso || c.id;
+            if (vistos.has(clave)) return false;
+            vistos.add(clave);
+            return true;
+          });
+          setCasos(esOperador ? unidos : data);
           setDestinatarios(dirs);
           setCargando(false);
         }

@@ -55,6 +55,22 @@ const ESTADO_INICIAL = {
   archivo_representacion: null,
 };
 
+// Espejo del backend (archivos/storage.py): extensiones y 10 MB máximos.
+const EXTENSIONES_PERMITIDAS = ['pdf', 'jpg', 'jpeg', 'png'];
+const TAMANO_MAXIMO_BYTES = 10 * 1024 * 1024;
+
+function validarArchivo(archivo) {
+  const nombre = archivo?.name || 'archivo';
+  const extension = nombre.split('.').pop().toLowerCase();
+  if (!EXTENSIONES_PERMITIDAS.includes(extension)) {
+    return `'${nombre}': formato no permitido. Usa PDF, JPG o PNG.`;
+  }
+  if (archivo.size > TAMANO_MAXIMO_BYTES) {
+    return `'${nombre}': supera los 10 MB permitidos.`;
+  }
+  return null;
+}
+
 function programasVisibles(catalogos, nivel) {
   const base = catalogos === null
     ? PROGRAMAS_DEFECTO.map((valor) => ({ valor, nivel: null }))
@@ -121,7 +137,17 @@ export default function FormularioCasoPage() {
 
   function onArchivosSeleccionados(e) {
     const nuevos = Array.from(e.target.files ?? []);
-    setForm((f) => ({ ...f, archivos: [...f.archivos, ...nuevos] }));
+    const validos = [];
+    const rechazados = [];
+    for (const archivo of nuevos) {
+      const motivo = validarArchivo(archivo);
+      if (motivo) rechazados.push(motivo);
+      else validos.push(archivo);
+    }
+    if (rechazados.length > 0) {
+      setError(`Archivos no válidos (se omitieron): ${rechazados.join(' ')}`);
+    }
+    setForm((f) => ({ ...f, archivos: [...f.archivos, ...validos] }));
     e.target.value = '';
   }
 
@@ -137,9 +163,23 @@ export default function FormularioCasoPage() {
       setError('Completa los campos obligatorios antes de enviar la solicitud.');
       return;
     }
+    if (!/^[^@\s]+@uninorte\.edu\.co$/i.test(form.correo_institucional.trim())) {
+      setError('El correo institucional debe pertenecer al dominio @uninorte.edu.co.');
+      return;
+    }
     if (form.archivos.length === 0) {
       setError('Adjunta al menos un documento de soporte: es obligatorio para completar la solicitud.');
       return;
+    }
+    const adjuntos = form.esTercero && form.archivo_representacion
+      ? [...form.archivos, form.archivo_representacion]
+      : form.archivos;
+    for (const archivo of adjuntos) {
+      const motivo = validarArchivo(archivo);
+      if (motivo) {
+        setError(`Revisa los adjuntos: ${motivo}`);
+        return;
+      }
     }
     if (form.esTercero && !form.archivo_representacion) {
       setError('Adjunta el soporte de representación: es obligatorio cuando un tercero diligencia la solicitud.');

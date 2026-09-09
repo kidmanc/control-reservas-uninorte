@@ -30,7 +30,14 @@ async function request(url, options = {}) {
 
   if (!res.ok) {
     const error = await res.json().catch(() => ({ detail: 'Error del servidor' }));
-    throw new Error(error.detail || `Error ${res.status}`);
+    const err = new Error(error.detail || `Error ${res.status}`);
+    err.status = res.status;
+    // 401 en el panel = sesión vencida o revocada: se avisa al AuthContext
+    // para cerrar sesión. El canal público nunca dispara esto.
+    if (res.status === 401 && !options.publica) {
+      window.dispatchEvent(new Event('sesion-expirada'));
+    }
+    throw err;
   }
   return res.json();
 }
@@ -149,7 +156,12 @@ export async function obtenerArchivo(casoId, archivoId) {
   }
   if (!res.ok) {
     const error = await res.json().catch(() => ({ detail: 'No se pudo obtener el archivo' }));
-    throw new Error(error.detail || 'No se pudo obtener el archivo');
+    const err = new Error(error.detail || 'No se pudo obtener el archivo');
+    err.status = res.status;
+    if (res.status === 401) {
+      window.dispatchEvent(new Event('sesion-expirada'));
+    }
+    throw err;
   }
   return res.blob();
 }

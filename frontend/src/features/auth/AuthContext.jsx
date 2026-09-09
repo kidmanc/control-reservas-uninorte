@@ -14,15 +14,48 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [cargando, setCargando] = useState(true);
 
-  // Al montar, verificar si hay sesión guardada
+  // Al montar: si hay token, validarlo contra el backend. Un token vencido
+  // o revocado (usuario desactivado) se limpia en vez de parecer válido.
+  // Además se escucha 'sesion-expirada': cualquier API lo dispara ante un
+  // 401 y la sesión se cierra sola.
   useEffect(() => {
+    let vigente = true;
     const token = localStorage.getItem('token');
-    const usuarioGuardado = localStorage.getItem('user');
 
-    if (token && usuarioGuardado) {
-      setUser(JSON.parse(usuarioGuardado));
+    if (token) {
+      fetch('/api/auth/me', { headers: { Authorization: `Bearer ${token}` } })
+        .then((res) => {
+          if (!res.ok) throw new Error('Sesión inválida');
+          return res.json();
+        })
+        .then((data) => {
+          if (!vigente) return;
+          const sesion = data.user || data;
+          localStorage.setItem('user', JSON.stringify(sesion));
+          setUser(sesion);
+        })
+        .catch(() => {
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+          if (vigente) setUser(null);
+        })
+        .finally(() => {
+          if (vigente) setCargando(false);
+        });
+    } else {
+      setCargando(false);
     }
-    setCargando(false);
+
+    const alExpirar = () => {
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      setUser(null);
+    };
+    window.addEventListener('sesion-expirada', alExpirar);
+    return () => {
+      vigente = false;
+      window.removeEventListener('sesion-expirada', alExpirar);
+    };
   }, []);
 
   /**

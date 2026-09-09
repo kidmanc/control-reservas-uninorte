@@ -17,7 +17,12 @@ async function request(url, options = {}) {
 
   if (!res.ok) {
     const error = await res.json().catch(() => ({ detail: 'Error del servidor' }));
-    throw new Error(error.detail || `Error ${res.status}`);
+    const err = new Error(error.detail || `Error ${res.status}`);
+    err.status = res.status;
+    if (res.status === 401) {
+      window.dispatchEvent(new Event('sesion-expirada'));
+    }
+    throw err;
   }
   return res.json();
 }
