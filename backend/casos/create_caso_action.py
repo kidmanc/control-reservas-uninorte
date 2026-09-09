@@ -1,6 +1,8 @@
 from sqlalchemy import select, func, or_
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi import HTTPException
+from datetime import datetime, timedelta, timezone
 
 from casos.casos_model import Caso, EstadoCaso, TipoSolicitud, ParticipacionCaso
 from usuarios.usuarios_model import Usuario
@@ -28,6 +30,16 @@ VEREDICTOS_DEVOLUCION = {
     "aprobador": {"con_correcciones"},
 }
 
+# Etiqueta del paso destino para los mensajes de remisión e historial.
+PASO_LABEL = {
+    "revisor": "revisión de detalle",
+    "centro_medico": "validación médica",
+    "aprobador": "aprobación final",
+}
+
+# Colombia no tiene horario de verano: UTC-5 fijo para el año del folio.
+COLOMBIA_TZ = timezone(timedelta(hours=-5))
+
 VEREDICTO_LABEL = {
     "documentos_validos": "visto bueno: documentos válidos",
     "documentos_no_validos": "no validados: documentos inválidos",
@@ -43,7 +55,9 @@ async def crear_caso_action(
     subido_por: str,
 ) -> Caso:
     # Una solicitud del mismo tipo para el mismo período solo puede existir una vez.
-    codigo = data["codigo_estudiantil"].strip()
+    # El código se compara normalizado (mayúsculas): el seguimiento también lo
+    # normaliza, así abc123 y ABC123 son el mismo estudiante.
+    codigo = data["codigo_estudiantil"].strip().upper()
     nombre = data["nombre_completo"].strip()
     duplicado = await db.execute(
         select(Caso).where(
@@ -62,11 +76,61 @@ async def crear_caso_action(
             ),
         )
 
-    # Generar número de caso
-    result = await db.execute(select(func.count(Caso.id)))
-    count = result.scalar() or 0
-    numero = f"RM-2026-{count + 1:04d}"
+    # Folio secuencial por año (hora de Colombia). Se usa max(id) en vez de
+    # COUNT para no reutilizar números si se borran filas, y se reintenta ante
+    # colisión UNIQUE si dos solicitudes llegan al mismo tiempo.
+    anio = datetime.now(COLOMBIA_TZ).year
+    base_result = await db.execute(select(func.max(Caso.id)))
+    base = base_result.scalar() or 0
+    rutas_guardadas: list[str] = []
+    caso = None
+    for intento in range(1, 4):
+        numero = f"RM-{anio}-{base + intento:04d}"
+        rutas_guardadas.clear()
+        # El stream de cada archivo ya se leyó si hubo reintento: rebobinar.
+        for archivo_subido in archivos:
+            await archivo_subido.seek(0)
+        try:
+            caso = await _insertar_caso(
+                db, data, tercero, archivos, subido_por, codigo, nombre, numero, rutas_guardadas
+            )
+            break
+        except IntegrityError as error:
+            await db.rollback()
+            eliminar_archivos(rutas_guardadas)
+            rutas_guardadas.clear()
+            if "numero_caso" not in str(getattr(error, "orig", error)):
+                raise
+            if intento == 3:
+                raise HTTPException(
+                    status_code=409,
+                    detail="No se pudo asignar el número de caso. Inténtalo de nuevo.",
+                )
+        except Exception:
+            await db.rollback()
+            eliminar_archivos(rutas_guardadas)
+            rutas_guardadas.clear()
+            raise
+    await db.refresh(caso)
+    return caso
 
+
+async def _insertar_caso(
+    db: AsyncSession,
+    data: dict,
+    tercero: dict | None,
+    archivos,
+    subido_por: str,
+    codigo: str,
+    nombre: str,
+    numero: str,
+    rutas_guardadas: list[str],
+) -> Caso:
+    """Inserta caso + historial + archivos en una transacción.
+
+    No limpia nada: ante cualquier error la sesión queda para rollback del
+    llamador, que además borra los archivos ya guardados en disco.
+    """
     caso = Caso(
         numero_caso=numero,
         nombre_completo=nombre,
@@ -88,38 +152,30 @@ async def crear_caso_action(
         caso.tercero_telefono = tercero.get("telefono_contacto")
         caso.tercero_correo = tercero.get("correo_contacto")
 
-    rutas_guardadas: list[str] = []
-    try:
-        db.add(caso)
-        await db.flush()
+    db.add(caso)
+    await db.flush()
+    db.add(
+        HistorialEstado(
+            caso_id=caso.id,
+            estado_anterior=None,
+            estado_nuevo=EstadoCaso.RECIBIDO.value,
+            cambiado_por="sistema",
+            descripcion="Solicitud recibida",
+        )
+    )
+    for archivo_subido in archivos:
+        ruta = await guardar_archivo(archivo_subido)
+        rutas_guardadas.append(ruta)
         db.add(
-            HistorialEstado(
+            Archivo(
                 caso_id=caso.id,
-                estado_anterior=None,
-                estado_nuevo=EstadoCaso.RECIBIDO.value,
-                cambiado_por="sistema",
-                descripcion="Solicitud recibida",
+                subido_por=subido_por,
+                nombre_archivo=archivo_subido.filename or "archivo",
+                ruta_almacenamiento=ruta,
+                descripcion=data.get("descripcion_adjuntos"),
             )
         )
-        for archivo_subido in archivos:
-            ruta = await guardar_archivo(archivo_subido)
-            rutas_guardadas.append(ruta)
-            db.add(
-                Archivo(
-                    caso_id=caso.id,
-                    subido_por=subido_por,
-                    nombre_archivo=archivo_subido.filename or "archivo",
-                    ruta_almacenamiento=ruta,
-                    descripcion=data.get("descripcion_adjuntos"),
-                )
-            )
-        await db.commit()
-    except Exception:
-        await db.rollback()
-        eliminar_archivos(rutas_guardadas)
-        raise
-
-    await db.refresh(caso)
+    await db.commit()
     return caso
 
 
@@ -330,7 +386,8 @@ async def remitir_caso_action(
         if motivo_limpio:
             descripcion += f": {motivo_limpio}"
     else:
-        descripcion = f"Caso remitido a {destino_nombre} para revisión"
+        paso = PASO_LABEL.get(rol_destino, "revisión")
+        descripcion = f"Caso remitido a {destino_nombre} para {paso}"
 
     estado_actual = caso.estado.value if hasattr(caso.estado, "value") else str(caso.estado)
     db.add(

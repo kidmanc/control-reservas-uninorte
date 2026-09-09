@@ -10,16 +10,57 @@ from archivos.archivos_schema import ArchivoResponse
 from historial.historial_schema import HistorialResponse
 
 
+TIPOS_SOLICITUD_VALIDOS = {"reserva_matricula", "devolucion"}
+
+
+class TerceroCreate(BaseModel):
+    """Quien diligencia por el estudiante impedido (solo si aplica)."""
+
+    nombre_completo: str = Field(min_length=1, max_length=200)
+    parentesco: str = Field(min_length=1, max_length=100)
+    documento_identidad: str = Field(min_length=1, max_length=50)
+    telefono_contacto: str | None = Field(default=None, max_length=50)
+    correo_contacto: str | None = Field(default=None, max_length=200)
+
+
 class CasoBase(BaseModel):
-    nombre_completo: str
-    codigo_estudiantil: str
+    nombre_completo: str = Field(min_length=1, max_length=200)
+    codigo_estudiantil: str = Field(min_length=1, max_length=50)
     correo_institucional: str
-    telefono_contacto: str | None = None
-    programa_academico: str
+    telefono_contacto: str | None = Field(default=None, max_length=50)
+    programa_academico: str = Field(min_length=1, max_length=200)
     tipo_solicitud: str
     nivel_academico: str | None = "pregrado"
     periodo_academico: str
-    motivo: str
+    motivo: str = Field(min_length=1, max_length=5000)
+
+    @field_validator("codigo_estudiantil")
+    @classmethod
+    def normalizar_codigo(cls, codigo: str) -> str:
+        return codigo.strip().upper()
+
+    @field_validator("nombre_completo", "programa_academico", "motivo")
+    @classmethod
+    def recortar_texto(cls, valor: str) -> str:
+        return valor.strip()
+
+    @field_validator("tipo_solicitud")
+    @classmethod
+    def validar_tipo_solicitud(cls, valor: str) -> str:
+        tipo = valor.strip().lower()
+        if tipo not in TIPOS_SOLICITUD_VALIDOS:
+            raise ValueError("El tipo de solicitud debe ser 'reserva_matricula' o 'devolucion'")
+        return tipo
+
+    @field_validator("nivel_academico")
+    @classmethod
+    def normalizar_nivel(cls, valor: str | None) -> str | None:
+        if valor is None:
+            return valor
+        nivel = valor.strip().lower()
+        if nivel not in {"pregrado", "posgrado"}:
+            raise ValueError("El nivel académico debe ser 'pregrado' o 'posgrado'")
+        return nivel
 
     @field_validator("periodo_academico")
     @classmethod
@@ -45,7 +86,7 @@ class CasoBase(BaseModel):
 
 class CasoCreate(CasoBase):
     descripcion_adjuntos: str | None = None
-    tercero: dict | None = None
+    tercero: TerceroCreate | None = None
 
 
 class CasoResponse(CasoBase):

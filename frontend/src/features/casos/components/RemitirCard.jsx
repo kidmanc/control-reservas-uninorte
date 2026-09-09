@@ -21,13 +21,14 @@ const ESPERA_POR_ROL = {
 function pasosValidos(tenedor, destinatarios, caso) {
   const rolTenedor = tenedor?.rol || null;
 
-  // En Tesorería: al Centro Médico o a revisión de detalle (solo nombres).
+  // En Tesorería: al Centro Médico o a revisión de detalle (paso + nombre,
+  // para que se vea a dónde va el caso y no solo a quién).
   if (rolTenedor === null) {
     return destinatarios
       .filter((d) => d.rol === 'revisor' || d.rol === 'centro_medico')
       .map((d) => ({
         revisor_id: d.id,
-        etiqueta: d.nombre,
+        etiqueta: `${ROL_LABEL[d.rol] || d.rol} — ${d.nombre}`,
         esDevolucion: false,
         veredicto: null,
         requiereMotivo: false,
@@ -61,7 +62,7 @@ function pasosValidos(tenedor, destinatarios, caso) {
       .filter((d) => d.rol === 'aprobador')
       .map((d) => ({
         revisor_id: d.id,
-        etiqueta: `Confirmar ejecución y enviar a aprobación — ${d.nombre}`,
+        etiqueta: `Confirmar ejecución y enviar a ${ROL_LABEL.aprobador} — ${d.nombre}`,
         esDevolucion: false,
         veredicto: null,
         requiereMotivo: false,
@@ -86,7 +87,7 @@ function pasosValidos(tenedor, destinatarios, caso) {
       return [
         {
           revisor_id: remitente.id,
-          etiqueta: `Devolver con correcciones a ${remitente.nombre}`,
+          etiqueta: `Devolver con correcciones a ${remitente.nombre} (${ROL_LABEL.revisor})`,
           esDevolucion: true,
           veredicto: 'con_correcciones',
           requiereMotivo: true,
@@ -97,7 +98,7 @@ function pasosValidos(tenedor, destinatarios, caso) {
       .filter((d) => d.rol === 'revisor')
       .map((d) => ({
         revisor_id: d.id,
-        etiqueta: `Devolver con correcciones a ${d.nombre}`,
+        etiqueta: `Devolver con correcciones a ${d.nombre} (${ROL_LABEL.revisor})`,
         esDevolucion: true,
         veredicto: 'con_correcciones',
         requiereMotivo: true,

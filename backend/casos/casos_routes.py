@@ -38,7 +38,16 @@ async def crear_caso(
     try:
         request = CasoCreate.model_validate_json(datos)
     except ValidationError as error:
-        raise HTTPException(status_code=422, detail=error.errors()) from error
+        # error.errors() trae objetos ValueError en "ctx" (no serializables):
+        # se convierten a texto para devolver un 422 limpio en vez de un 500.
+        detalles = []
+        for item in error.errors():
+            item = dict(item)
+            ctx = item.get("ctx")
+            if isinstance(ctx, dict):
+                item["ctx"] = {clave: str(valor) for clave, valor in ctx.items()}
+            detalles.append(item)
+        raise HTTPException(status_code=422, detail=detalles) from error
 
     if not archivos:
         raise HTTPException(status_code=422, detail="Debes adjuntar al menos un documento de soporte")
@@ -47,7 +56,7 @@ async def crear_caso(
     caso = await crear_caso_controller(
         db,
         request.model_dump(),
-        request.tercero,
+        request.tercero.model_dump() if request.tercero else None,
         archivos,
         subido_por,
     )
