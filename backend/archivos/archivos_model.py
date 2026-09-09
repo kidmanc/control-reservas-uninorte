@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey
+from sqlalchemy import Column, Integer, String, Boolean, DateTime, ForeignKey
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 
@@ -14,6 +14,8 @@ class Archivo(Base):
     nombre_archivo = Column(String(255), nullable=False)
     ruta_almacenamiento = Column(String(500), nullable=False)
     descripcion = Column(String(255))
+    # Como los comentarios: el equipo puede compartirlo con el estudiante o no.
+    visible_para_estudiante = Column(Boolean, default=True, nullable=False, server_default="1")
     fecha = Column(DateTime(timezone=True), server_default=func.now())
 
     caso = relationship("Caso", back_populates="archivos")

@@ -199,3 +199,35 @@ export async function subirArchivoEstudiante(numeroCaso, archivo, codigo) {
   });
   return getCasoPublico(numeroCaso, codigo);
 }
+
+export async function subirArchivoInterno(numeroCaso, { archivo, descripcion, visible }) {
+  const { db_id } = await getCaso(numeroCaso);
+  const formData = new FormData();
+  formData.append('archivo', archivo);
+  if (descripcion) formData.append('descripcion', descripcion);
+  formData.append('visible', visible ? 'true' : 'false');
+
+  await request(`/casos/${db_id}/archivos/adjuntar`, {
+    method: 'POST',
+    body: formData,
+  });
+  return getCaso(numeroCaso);
+}
+
+export async function descargarArchivoPublico(numeroCaso, archivoId, codigo) {
+  const { db_id } = await getCasoPublico(numeroCaso, codigo);
+  let res;
+  try {
+    res = await fetch(
+      `${API}/casos/${db_id}/archivos/${archivoId}/descargar?codigo=${encodeURIComponent(codigo || '')}`,
+      { cache: 'no-store' },
+    );
+  } catch {
+    throw new Error('No se pudo conectar con el servidor.');
+  }
+  if (!res.ok) {
+    const error = await res.json().catch(() => ({ detail: 'No se pudo obtener el archivo' }));
+    throw new Error(error.detail || 'No se pudo obtener el archivo');
+  }
+  return res.blob();
+}

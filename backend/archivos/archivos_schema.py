@@ -9,6 +9,7 @@ class ArchivoResponse(BaseModel):
     subido_por: str
     nombre_archivo: str
     descripcion: str | None = None
+    visible_para_estudiante: bool = True
     fecha: datetime | None = None
 
     @field_validator("fecha", mode="before")

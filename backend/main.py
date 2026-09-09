@@ -39,6 +39,9 @@ NUEVAS_COLUMNAS = {
     "catalogos": {
         "nivel": "VARCHAR(20)",
     },
+    "archivos": {
+        "visible_para_estudiante": "BOOLEAN DEFAULT 1",
+    },
 }
 
 

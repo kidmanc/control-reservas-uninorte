@@ -2,6 +2,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from archivos.upload_archivo_action import (
     subir_archivo_action,
+    adjuntar_interno_action,
     listar_archivos_action,
     obtener_archivo_action,
     validar_carga_estudiante_action,
@@ -14,6 +15,10 @@ async def validar_carga_estudiante_controller(db: AsyncSession, caso_id: int):
 
 async def subir_archivo_controller(db: AsyncSession, caso_id: int, data: dict):
     return await subir_archivo_action(db, caso_id, data)
+
+
+async def adjuntar_interno_controller(db: AsyncSession, caso_id: int, archivo, data: dict, actor: dict):
+    return await adjuntar_interno_action(db, caso_id, archivo, data, actor)
 
 
 async def listar_archivos_controller(db: AsyncSession, caso_id: int):

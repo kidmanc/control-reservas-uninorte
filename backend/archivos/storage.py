@@ -5,8 +5,11 @@ from fastapi import UploadFile, HTTPException
 
 from config import settings
 
-# Extensiones aceptadas para documentos de soporte (PDF e imágenes).
-EXTENSIONES_PERMITIDAS = {".pdf", ".jpg", ".jpeg", ".png"}
+# Extensiones aceptadas según el canal: el estudiante solo soportes (PDF e
+# imágenes); el equipo interno además planillas para pasarse liquidación.
+EXTENSIONES_SOPORTE = {".pdf", ".jpg", ".jpeg", ".png"}
+EXTENSIONES_INTERNO = EXTENSIONES_SOPORTE | {".xls", ".xlsx", ".csv"}
+EXTENSIONES_PERMITIDAS = EXTENSIONES_SOPORTE
 TAMANO_MAXIMO_BYTES = 10 * 1024 * 1024  # 10 MB
 TAMANO_CHUNK = 1024 * 1024  # Se lee/escribe por bloques de 1 MB.
 
@@ -17,19 +20,31 @@ FIRMAS_POR_EXTENSION = {
     ".jpg": (b"\xff\xd8\xff",),
     ".jpeg": (b"\xff\xd8\xff",),
     ".png": (b"\x89PNG\r\n\x1a\n",),
+    ".xls": (b"\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1",),
+    ".xlsx": (b"PK\x03\x04",),
+    # El CSV es texto plano: sin firma; se rechaza si trae bytes NUL (binario).
 }
 
 
-async def guardar_archivo(archivo: UploadFile) -> str:
+def _firma_valida(ext: str, primer_bloque: bytes) -> bool:
+    if ext == ".csv":
+        return b"\x00" not in primer_bloque
+    return primer_bloque.startswith(FIRMAS_POR_EXTENSION.get(ext, ()))
+
+
+async def guardar_archivo(archivo: UploadFile, permitidas: set[str] | None = None) -> str:
     """Valida extensión, firma real y tamaño leyendo por stream.
 
+    `permitidas` limita por canal (el estudiante no puede subir planillas).
     El archivo se escribe a disco por bloques: nunca se carga completo en
     memoria y un archivo de más de 10 MB se rechaza en cuanto se detecta,
     borrando el parcial.
     """
+    if permitidas is None:
+        permitidas = EXTENSIONES_PERMITIDAS
     ext = os.path.splitext(archivo.filename or "")[1].lower()
 
-    if ext not in EXTENSIONES_PERMITIDAS:
+    if ext not in permitidas:
         raise HTTPException(
             status_code=400,
             detail="Tipo de archivo no permitido. Usa PDF, JPG o PNG.",
@@ -39,7 +54,6 @@ async def guardar_archivo(archivo: UploadFile) -> str:
     nombre_unico = f"{uuid.uuid4().hex}{ext}"
     ruta = os.path.join(settings.UPLOAD_DIR, nombre_unico)
 
-    firmas = FIRMAS_POR_EXTENSION[ext]
     total = 0
     try:
         with open(ruta, "wb") as destino:
@@ -47,7 +61,7 @@ async def guardar_archivo(archivo: UploadFile) -> str:
                 bloque = await archivo.read(TAMANO_CHUNK)
                 if not bloque:
                     break
-                if total == 0 and not bloque.startswith(firmas):
+                if total == 0 and not _firma_valida(ext, bloque):
                     raise HTTPException(
                         status_code=400,
                         detail=f"El contenido no corresponde a un archivo {ext[1:].upper()} válido.",

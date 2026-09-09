@@ -5,7 +5,7 @@ import EstadoBadge from '../../../components/ui/EstadoBadge';
 import TipoTag from '../../../components/ui/TipoTag';
 import { IconBack, IconUsers } from '../../../components/ui/icons';
 import { useAuth } from '../../auth/AuthContext';
-import { getCaso, cambiarEstado, agregarComentario, obtenerArchivo, actualizarCasoDecision, remitirCaso } from '../api/casosApi';
+import { getCaso, cambiarEstado, agregarComentario, obtenerArchivo, actualizarCasoDecision, remitirCaso, subirArchivoInterno } from '../api/casosApi';
 import { listarDestinatarios } from '../../usuarios/api/usuariosApi';
 import { NIVELES_ACADEMICOS, NIVEL_ACADEMICO_LABEL, TIPOS_SOLICITUD, ESTADOS_FINALES } from '../constants';
 import StatusChanger from '../components/StatusChanger';
@@ -32,6 +32,7 @@ export default function DetalleCasoPage() {
   const [destinatarios, setDestinatarios] = useState([]);
   const [remitiendo, setRemitiendo] = useState(false);
   const [enviandoComentario, setEnviandoComentario] = useState(false);
+  const [adjuntandoArchivo, setAdjuntandoArchivo] = useState(false);
   const [archivoAbriendoId, setArchivoAbriendoId] = useState(null);
   const [errorAccion, setErrorAccion] = useState(null);
 
@@ -113,6 +114,23 @@ export default function DetalleCasoPage() {
       setErrorAccion(err.message || 'No se pudo guardar el comentario.');
     } finally {
       setEnviandoComentario(false);
+    }
+  }
+
+  async function onAdjuntarArchivo(datos) {
+    if (!datos) {
+      setErrorAccion('Archivo no válido. Usa PDF, imagen o Excel (XLS, XLSX, CSV) de máximo 10 MB.');
+      return;
+    }
+    setAdjuntandoArchivo(true);
+    setErrorAccion(null);
+    try {
+      const actualizado = await subirArchivoInterno(id, datos);
+      setCaso(actualizado);
+    } catch (err) {
+      setErrorAccion(err.message || 'No se pudo adjuntar el documento.');
+    } finally {
+      setAdjuntandoArchivo(false);
     }
   }
 
@@ -199,6 +217,12 @@ export default function DetalleCasoPage() {
       ((user?.rol === 'asistente_tesoreria' && enTesoreria) ||
         (user?.rol === 'aprobador' && esTenedor)));
   const puedeEditarDecision =
+    user?.rol === 'admin' ||
+    (!finalizado && user?.rol === 'asistente_tesoreria' && enTesoreria);
+
+  // Adjuntar documentos del equipo: admin siempre; asistente en Tesorería
+  // no finalizados (para pasarle soportes al revisor antes de remitir).
+  const puedeAdjuntar =
     user?.rol === 'admin' ||
     (!finalizado && user?.rol === 'asistente_tesoreria' && enTesoreria);
 
@@ -356,6 +380,9 @@ export default function DetalleCasoPage() {
               archivos={caso.archivos}
               onVerArchivo={onVerArchivo}
               archivoAbriendoId={archivoAbriendoId}
+              puedeAdjuntar={puedeAdjuntar}
+              onAdjuntar={onAdjuntarArchivo}
+              adjuntando={adjuntandoArchivo}
             />
             {puedeComentar && (
               <CommentComposer comentarios={caso.comentarios} onAgregar={onAgregarComentario} enviando={enviandoComentario} />

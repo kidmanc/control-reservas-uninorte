@@ -140,6 +140,7 @@ def _vista_publica(db: AsyncSession, caso, user: dict | None):
     if user is None:
         db.expunge(caso)
         caso.comentarios = [c for c in caso.comentarios if c.visible_para_estudiante]
+        caso.archivos = [a for a in caso.archivos if a.visible_para_estudiante]
     return caso
 
 

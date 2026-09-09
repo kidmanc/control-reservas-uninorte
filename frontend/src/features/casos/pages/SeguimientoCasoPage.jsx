@@ -3,7 +3,7 @@ import { useParams } from 'react-router-dom';
 import EstadoBadge from '../../../components/ui/EstadoBadge';
 import TipoTag from '../../../components/ui/TipoTag';
 import { IconFile, IconUpload, IconWarning, IconReceived, IconCheckCircle } from '../../../components/ui/icons';
-import { getCasoPublico, agregarComentarioPublico, subirArchivoEstudiante } from '../api/casosApi';
+import { getCasoPublico, agregarComentarioPublico, subirArchivoEstudiante, descargarArchivoPublico } from '../api/casosApi';
 import { ESTADOS, ESTADOS_FINALES } from '../constants';
 import '../../casos/pages/FormularioCasoPage.css';
 import './DetalleCasoPage.css';
@@ -40,6 +40,7 @@ export default function SeguimientoCasoPage() {
   const [respuesta, setRespuesta] = useState('');
   const [enviandoRespuesta, setEnviandoRespuesta] = useState(false);
   const [subiendoArchivo, setSubiendoArchivo] = useState(false);
+  const [descargandoArchivoId, setDescargandoArchivoId] = useState(null);
   // Puerta de acceso: el código se guarda solo en esta pestaña.
   const [codigo, setCodigo] = useState('');
   const [codigoInput, setCodigoInput] = useState('');
@@ -134,6 +135,28 @@ export default function SeguimientoCasoPage() {
       }
     } finally {
       setEnviandoRespuesta(false);
+    }
+  }
+
+  async function onDescargarArchivo(archivo) {
+    setDescargandoArchivoId(archivo.id);
+    setErrorAccion(null);
+    try {
+      const blob = await descargarArchivoPublico(id, archivo.id, codigo);
+      const url = URL.createObjectURL(blob);
+      const enlace = document.createElement('a');
+      enlace.href = url;
+      enlace.download = archivo.nombre_archivo;
+      enlace.click();
+      window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    } catch (err) {
+      if (err.message && err.message.includes('No encontramos')) {
+        expulsar('Tu acceso venció o el código cambió. Ingrésalo de nuevo.');
+      } else {
+        setErrorAccion(err.message || 'No se pudo descargar el archivo.');
+      }
+    } finally {
+      setDescargandoArchivoId(null);
     }
   }
 
@@ -337,6 +360,14 @@ export default function SeguimientoCasoPage() {
               <div style={{ flex: 1 }}>
                 <div className="file-name">{a.nombre_archivo}</div>
               </div>
+              <button
+                type="button"
+                className="btn-small"
+                disabled={descargandoArchivoId === a.id}
+                onClick={() => onDescargarArchivo(a)}
+              >
+                {descargandoArchivoId === a.id ? 'Descargando...' : 'Descargar'}
+              </button>
             </div>
           ))}
 

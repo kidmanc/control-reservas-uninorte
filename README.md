@@ -103,6 +103,7 @@ Detalle completo en `docs/roles-y-permisos.md`.
 | POST | `/api/casos/{id}/comentarios/` | Agregar comentario (autor lo fija el servidor) | Código si anónimo |
 | GET | `/api/casos/{id}/comentarios/` | Listar (anónimo: solo visibles) | Código si anónimo |
 | POST | `/api/casos/{id}/archivos/` | Subir archivo (solo en `falta_documentacion`) | Código |
+| POST | `/api/casos/{id}/archivos/adjuntar` | Adjunto del equipo, interno o visible (acepta Excel) | Tesorería |
 | GET | `/api/casos/{id}/archivos/` | Listar archivos | Código si anónimo |
 | GET | `/api/casos/{id}/archivos/{aid}/descargar` | Descargar soporte | Sí |
 | GET | `/api/casos/{id}/historial/` | Historial de estados | Código si anónimo |
