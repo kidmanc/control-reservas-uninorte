@@ -21,33 +21,50 @@ const ESPERA_POR_ROL = {
 function pasosValidos(tenedor, destinatarios, caso) {
   const rolTenedor = tenedor?.rol || null;
 
-  // En Tesorería: al Centro Médico o a revisión de detalle. Las opciones
-  // muestran solo el paso, sin nombres de personas.
+  // En Tesorería: al Centro Médico o a revisión de detalle. Cada paso trae
+  // sus candidatos; la opción muestra solo el paso, sin nombres de personas.
   if (rolTenedor === null) {
-    return destinatarios
-      .filter((d) => d.rol === 'revisor' || d.rol === 'centro_medico')
-      .map((d) => ({
-        revisor_id: d.id,
-        etiqueta: `Enviar a ${ROL_LABEL[d.rol] || d.rol}`,
+    const pasos = [];
+    const revision = destinatarios.filter((d) => d.rol === 'revisor');
+    const medicos = destinatarios.filter((d) => d.rol === 'centro_medico');
+    if (revision.length > 0) {
+      pasos.push({
+        clave: 'revisor',
+        etiqueta: `Enviar a ${ROL_LABEL.revisor}`,
+        candidatos: revision,
         esDevolucion: false,
         veredicto: null,
         requiereMotivo: false,
-      }));
+      });
+    }
+    if (medicos.length > 0) {
+      pasos.push({
+        clave: 'centro_medico',
+        etiqueta: `Enviar a ${ROL_LABEL.centro_medico}`,
+        candidatos: medicos,
+        esDevolucion: false,
+        veredicto: null,
+        requiereMotivo: false,
+      });
+    }
+    return pasos;
   }
 
   // Centro Médico: aprueba o rechaza los documentos (solo rechazar pide motivo).
   if (rolTenedor === 'centro_medico') {
     return [
       {
-        revisor_id: null,
+        clave: 'aprobar',
         etiqueta: 'Aprobar',
+        candidatos: [],
         esDevolucion: true,
         veredicto: 'documentos_validos',
         requiereMotivo: false,
       },
       {
-        revisor_id: null,
+        clave: 'rechazar',
         etiqueta: 'Rechazar',
+        candidatos: [],
         esDevolucion: true,
         veredicto: 'documentos_no_validos',
         requiereMotivo: true,
@@ -58,51 +75,48 @@ function pasosValidos(tenedor, destinatarios, caso) {
   // Revisión de detalle: la revisión se hace en otra plataforma; aquí solo
   // confirma que ya ejecutó y envía a aprobación final, o devuelve con correcciones.
   if (rolTenedor === 'revisor') {
-    const adelantes = destinatarios
-      .filter((d) => d.rol === 'aprobador')
-      .map((d) => ({
-        revisor_id: d.id,
+    const pasos = [];
+    const aprobadores = destinatarios.filter((d) => d.rol === 'aprobador');
+    if (aprobadores.length > 0) {
+      pasos.push({
+        clave: 'aprobador',
         etiqueta: `Confirmar ejecución y enviar a ${ROL_LABEL.aprobador}`,
+        candidatos: aprobadores,
         esDevolucion: false,
         veredicto: null,
         requiereMotivo: false,
-      }));
+      });
+    }
+    pasos.push({
+      clave: 'tesoreria',
+      etiqueta: 'Devolver con correcciones',
+      candidatos: [],
+      esDevolucion: true,
+      veredicto: 'con_correcciones',
+      requiereMotivo: true,
+    });
+    return pasos;
+  }
+
+  // Aprobador final: solo devuelve a quien se lo envió, con correcciones.
+  // El backend lo impone; aquí se preselecciona esa persona.
+  if (rolTenedor === 'aprobador') {
+    const remitente =
+      destinatarios.find((d) => d.id === caso.remitido_por_id && d.rol === 'revisor') || null;
+    const candidatos = remitente
+      ? [remitente]
+      : destinatarios.filter((d) => d.rol === 'revisor');
+    if (candidatos.length === 0) return [];
     return [
-      ...adelantes,
       {
-        revisor_id: null,
-        etiqueta: 'Devolver con correcciones',
+        clave: 'revisor',
+        etiqueta: `Devolver con correcciones a ${ROL_LABEL.revisor}`,
+        candidatos,
         esDevolucion: true,
         veredicto: 'con_correcciones',
         requiereMotivo: true,
       },
     ];
-  }
-
-  // Aprobador final: solo devuelve a quien se lo envió, con correcciones.
-  if (rolTenedor === 'aprobador') {
-    const remitente =
-      destinatarios.find((d) => d.id === caso.remitido_por_id && d.rol === 'revisor') || null;
-    if (remitente) {
-      return [
-        {
-          revisor_id: remitente.id,
-          etiqueta: `Devolver con correcciones a ${ROL_LABEL.revisor}`,
-          esDevolucion: true,
-          veredicto: 'con_correcciones',
-          requiereMotivo: true,
-        },
-      ];
-    }
-    return destinatarios
-      .filter((d) => d.rol === 'revisor')
-      .map((d) => ({
-        revisor_id: d.id,
-        etiqueta: `Devolver con correcciones a ${ROL_LABEL.revisor}`,
-        esDevolucion: true,
-        veredicto: 'con_correcciones',
-        requiereMotivo: true,
-      }));
   }
 
   return [];
@@ -115,6 +129,7 @@ function nombreTenedor(tenedor) {
 
 export default function RemitirCard({ caso, destinatarios, onRemitir, remitiendo, actor }) {
   const [indice, setIndice] = useState('');
+  const [persona, setPersona] = useState('');
   const [motivo, setMotivo] = useState('');
 
   const esTesoreria = actor?.rol === 'admin' || actor?.rol === 'asistente_tesoreria';
@@ -127,11 +142,27 @@ export default function RemitirCard({ caso, destinatarios, onRemitir, remitiendo
   const pasos = pasosValidos(tenedor, destinatarios, caso);
   const paso = indice === '' ? null : pasos[Number(indice)];
   const faltaMotivo = Boolean(paso && paso.requiereMotivo && !motivo.trim());
+  // Si el paso tiene varias personas, hay que escoger cuál lo recibe;
+  // con una sola se usa directamente sin preguntar.
+  const candidatos = paso?.candidatos || [];
+  const personaElegida =
+    candidatos.length <= 1 ? candidatos[0] || null : candidatos[Number(persona)] || null;
+
+  function onElegirPaso(valor) {
+    setIndice(valor);
+    setPersona('');
+  }
 
   function onConfirmar() {
     if (!paso || faltaMotivo) return;
-    onRemitir(paso.revisor_id, paso.requiereMotivo ? motivo.trim() : null, paso.veredicto);
+    if (candidatos.length > 1 && !personaElegida) return;
+    onRemitir(
+      personaElegida ? personaElegida.id : null,
+      paso.requiereMotivo ? motivo.trim() : null,
+      paso.veredicto,
+    );
     setIndice('');
+    setPersona('');
     setMotivo('');
   }
 
@@ -149,15 +180,29 @@ export default function RemitirCard({ caso, destinatarios, onRemitir, remitiendo
       <>
         <div className="remit-field">
           <label>{tenedor?.rol === 'centro_medico' ? 'Decisión' : 'Siguiente paso'}</label>
-          <select value={indice} disabled={remitiendo} onChange={(e) => setIndice(e.target.value)}>
+          <select value={indice} disabled={remitiendo} onChange={(e) => onElegirPaso(e.target.value)}>
             <option value="">Selecciona una opción</option>
             {pasos.map((p, i) => (
-              <option key={`${p.revisor_id}-${p.veredicto}-${i}`} value={i}>
+              <option key={`${p.clave}-${i}`} value={i}>
                 {p.etiqueta}
               </option>
             ))}
           </select>
         </div>
+
+        {candidatos.length > 1 && (
+          <div className="remit-field">
+            <label>Persona que lo recibe</label>
+            <select value={persona} disabled={remitiendo} onChange={(e) => setPersona(e.target.value)}>
+              <option value="">Selecciona la persona</option>
+              {candidatos.map((c, i) => (
+                <option key={c.id} value={i}>
+                  {c.nombre}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
 
         {paso?.requiereMotivo && (
           <div className="remit-field">
@@ -176,7 +221,7 @@ export default function RemitirCard({ caso, destinatarios, onRemitir, remitiendo
           <button
             type="button"
             className="btn-primary remit-btn"
-            disabled={remitiendo || !paso || faltaMotivo}
+            disabled={remitiendo || !paso || faltaMotivo || (candidatos.length > 1 && !personaElegida)}
             onClick={onConfirmar}
           >
             {remitiendo ? 'Moviendo…' : 'Confirmar paso'}
