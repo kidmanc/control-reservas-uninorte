@@ -21,14 +21,14 @@ const ESPERA_POR_ROL = {
 function pasosValidos(tenedor, destinatarios, caso) {
   const rolTenedor = tenedor?.rol || null;
 
-  // En Tesorería: al Centro Médico o a revisión de detalle (paso + nombre,
-  // para que se vea a dónde va el caso y no solo a quién).
+  // En Tesorería: al Centro Médico o a revisión de detalle. Las opciones
+  // muestran solo el paso, sin nombres de personas.
   if (rolTenedor === null) {
     return destinatarios
       .filter((d) => d.rol === 'revisor' || d.rol === 'centro_medico')
       .map((d) => ({
         revisor_id: d.id,
-        etiqueta: `${ROL_LABEL[d.rol] || d.rol} — ${d.nombre}`,
+        etiqueta: `Enviar a ${ROL_LABEL[d.rol] || d.rol}`,
         esDevolucion: false,
         veredicto: null,
         requiereMotivo: false,
@@ -62,7 +62,7 @@ function pasosValidos(tenedor, destinatarios, caso) {
       .filter((d) => d.rol === 'aprobador')
       .map((d) => ({
         revisor_id: d.id,
-        etiqueta: `Confirmar ejecución y enviar a ${ROL_LABEL.aprobador} — ${d.nombre}`,
+        etiqueta: `Confirmar ejecución y enviar a ${ROL_LABEL.aprobador}`,
         esDevolucion: false,
         veredicto: null,
         requiereMotivo: false,
@@ -87,7 +87,7 @@ function pasosValidos(tenedor, destinatarios, caso) {
       return [
         {
           revisor_id: remitente.id,
-          etiqueta: `Devolver con correcciones a ${remitente.nombre} (${ROL_LABEL.revisor})`,
+          etiqueta: `Devolver con correcciones a ${ROL_LABEL.revisor}`,
           esDevolucion: true,
           veredicto: 'con_correcciones',
           requiereMotivo: true,
@@ -98,7 +98,7 @@ function pasosValidos(tenedor, destinatarios, caso) {
       .filter((d) => d.rol === 'revisor')
       .map((d) => ({
         revisor_id: d.id,
-        etiqueta: `Devolver con correcciones a ${d.nombre} (${ROL_LABEL.revisor})`,
+        etiqueta: `Devolver con correcciones a ${ROL_LABEL.revisor}`,
         esDevolucion: true,
         veredicto: 'con_correcciones',
         requiereMotivo: true,
@@ -148,7 +148,7 @@ export default function RemitirCard({ caso, destinatarios, onRemitir, remitiendo
     return (
       <>
         <div className="remit-field">
-          <label>{tenedor?.rol === 'centro_medico' ? 'Decisión' : 'Remitir a'}</label>
+          <label>{tenedor?.rol === 'centro_medico' ? 'Decisión' : 'Siguiente paso'}</label>
           <select value={indice} disabled={remitiendo} onChange={(e) => setIndice(e.target.value)}>
             <option value="">Selecciona una opción</option>
             {pasos.map((p, i) => (

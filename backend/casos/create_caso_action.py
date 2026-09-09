@@ -382,7 +382,7 @@ async def remitir_caso_action(
     caso.remitido_por_id = caso.revisor_asignado_id
     caso.revisor_asignado_id = revisor_id
     if es_devolucion:
-        descripcion = f"Caso devuelto a {destino_nombre} — {etiqueta_veredicto}"
+        descripcion = f"Caso devuelto a {destino_nombre}: {etiqueta_veredicto}"
         if motivo_limpio:
             descripcion += f": {motivo_limpio}"
     else:
