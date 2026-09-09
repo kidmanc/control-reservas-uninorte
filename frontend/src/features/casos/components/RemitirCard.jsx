@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ESTADOS_FINALES, ESTADO_LABEL } from '../constants';
+import { ESTADOS_FINALES, ESTADO_LABEL, TIPOS_SOLICITUD } from '../constants';
 import { IconUsers } from '../../../components/ui/icons';
 import './RemitirCard.css';
 
@@ -35,6 +35,8 @@ function pasosValidos(tenedor, destinatarios, caso) {
         esDevolucion: false,
         veredicto: null,
         requiereMotivo: false,
+        // Sin liquidación el asistente solo puede ir al Centro Médico.
+        requiereLiquidacion: true,
       });
     }
     if (medicos.length > 0) {
@@ -142,6 +144,15 @@ export default function RemitirCard({ caso, destinatarios, onRemitir, remitiendo
   const pasos = pasosValidos(tenedor, destinatarios, caso);
   const paso = indice === '' ? null : pasos[Number(indice)];
   const faltaMotivo = Boolean(paso && paso.requiereMotivo && !motivo.trim());
+  // Liquidación = porcentaje (+ destino si es devolución), la registra el
+  // asistente. Sin ella, solo se puede enviar al Centro Médico.
+  const liquidacionCompleta =
+    caso.porcentaje_aplicado != null &&
+    (caso.tipo_solicitud !== TIPOS_SOLICITUD.DEVOLUCION || caso.destino_devolucion != null);
+  const esAsistente = actor?.rol === 'asistente_tesoreria';
+  const pasoBloqueado = Boolean(
+    esAsistente && paso?.requiereLiquidacion && !liquidacionCompleta,
+  );
   // Si el paso tiene varias personas, hay que escoger cuál lo recibe;
   // con una sola se usa directamente sin preguntar. Ojo: Number('') es 0,
   // por eso sin selección explícita no se elige a nadie.
@@ -157,7 +168,7 @@ export default function RemitirCard({ caso, destinatarios, onRemitir, remitiendo
   }
 
   function onConfirmar() {
-    if (!paso || faltaMotivo) return;
+    if (!paso || faltaMotivo || pasoBloqueado) return;
     if (candidatos.length > 1 && !personaElegida) return;
     onRemitir(
       personaElegida ? personaElegida.id : null,
@@ -185,13 +196,36 @@ export default function RemitirCard({ caso, destinatarios, onRemitir, remitiendo
           <label>{tenedor?.rol === 'centro_medico' ? 'Decisión' : 'Siguiente paso'}</label>
           <select value={indice} disabled={remitiendo} onChange={(e) => onElegirPaso(e.target.value)}>
             <option value="">Selecciona una opción</option>
-            {pasos.map((p, i) => (
-              <option key={`${p.clave}-${i}`} value={i}>
-                {p.etiqueta}
-              </option>
-            ))}
+            {pasos.map((p, i) => {
+              const bloqueado = Boolean(
+                esAsistente && p.requiereLiquidacion && !liquidacionCompleta,
+              );
+              return (
+                <option
+                  key={`${p.clave}-${i}`}
+                  value={i}
+                  disabled={bloqueado}
+                  title={bloqueado ? 'Completa primero la liquidación (porcentaje y destino)' : undefined}
+                >
+                  {p.etiqueta}
+                </option>
+              );
+            })}
           </select>
         </div>
+
+        {esAsistente && !liquidacionCompleta && (
+          <p className="empty-hint" style={{ marginTop: 8 }}>
+            Sin liquidar solo puedes enviar al Centro Médico. Completa el porcentaje
+            (y el destino si es devolución) en la tarjeta Decisión.
+          </p>
+        )}
+
+        {pasoBloqueado && (
+          <p className="empty-hint" style={{ marginTop: 8 }}>
+            Completa primero la liquidación para enviar a {ROL_LABEL.revisor}.
+          </p>
+        )}
 
         {candidatos.length > 1 && (
           <div className="remit-field">
@@ -224,7 +258,7 @@ export default function RemitirCard({ caso, destinatarios, onRemitir, remitiendo
           <button
             type="button"
             className="btn-primary remit-btn"
-            disabled={remitiendo || !paso || faltaMotivo || (candidatos.length > 1 && !personaElegida)}
+            disabled={remitiendo || !paso || faltaMotivo || pasoBloqueado || (candidatos.length > 1 && !personaElegida)}
             onClick={onConfirmar}
           >
             {remitiendo ? 'Moviendo…' : 'Confirmar paso'}

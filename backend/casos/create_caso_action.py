@@ -352,6 +352,21 @@ async def remitir_caso_action(
             detail="Ese paso no es válido en el flujo del caso.",
         )
 
+    # Sin liquidación no hay avance a Revisión y ejecución: el asistente solo
+    # puede enviar al Centro Médico hasta completar porcentaje (y destino si
+    # es devolución). La tesorera (admin) conserva override.
+    if rol_tenedor is None and rol_destino == "revisor" and rol_actor == "asistente_tesoreria":
+        if caso.porcentaje_aplicado is None or (
+            caso.tipo_solicitud == TipoSolicitud.DEVOLUCION and not caso.destino_devolucion
+        ):
+            raise HTTPException(
+                status_code=409,
+                detail=(
+                    "Completa primero la liquidación (porcentaje y destino si es "
+                    "devolución). Sin liquidar solo puedes enviar al Centro Médico."
+                ),
+            )
+
     # El aprobador solo devuelve a quien se lo envió: la cadena Tesorería ->
     # revisor -> aprobador -> revisor queda garantizada aunque haya varios
     # revisores. Tesorería conserva override para casos borde.
