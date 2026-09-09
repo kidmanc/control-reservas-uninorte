@@ -143,10 +143,13 @@ export default function RemitirCard({ caso, destinatarios, onRemitir, remitiendo
   const paso = indice === '' ? null : pasos[Number(indice)];
   const faltaMotivo = Boolean(paso && paso.requiereMotivo && !motivo.trim());
   // Si el paso tiene varias personas, hay que escoger cuál lo recibe;
-  // con una sola se usa directamente sin preguntar.
+  // con una sola se usa directamente sin preguntar. Ojo: Number('') es 0,
+  // por eso sin selección explícita no se elige a nadie.
   const candidatos = paso?.candidatos || [];
   const personaElegida =
-    candidatos.length <= 1 ? candidatos[0] || null : candidatos[Number(persona)] || null;
+    candidatos.length <= 1
+      ? candidatos[0] || null
+      : persona === '' ? null : candidatos[Number(persona)] || null;
 
   function onElegirPaso(valor) {
     setIndice(valor);
