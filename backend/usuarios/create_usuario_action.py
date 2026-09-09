@@ -36,7 +36,7 @@ async def crear_usuario_action(db: AsyncSession, data: dict) -> Usuario:
 
     existing = await db.execute(select(Usuario).where(Usuario.correo == correo))
     if existing.scalar_one_or_none():
-        raise HTTPException(status_code=400, detail="Ya existe un usuario con ese correo")
+        raise HTTPException(status_code=409, detail="Ya existe un usuario con ese correo")
 
     usuario = Usuario(
         nombre=data["nombre"],

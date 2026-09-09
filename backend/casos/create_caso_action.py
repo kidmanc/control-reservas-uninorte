@@ -77,15 +77,16 @@ async def crear_caso_action(
         )
 
     # Folio secuencial por año (hora de Colombia). Se usa max(id) en vez de
-    # COUNT para no reutilizar números si se borran filas, y se reintenta ante
-    # colisión UNIQUE si dos solicitudes llegan al mismo tiempo.
+    # COUNT para no reutilizar números si se borran filas. La base se
+    # recalcula en CADA intento: con envíos simultáneos una base fija queda
+    # obsoleta y todos los hilos chocarían en los mismos candidatos.
     anio = datetime.now(COLOMBIA_TZ).year
-    base_result = await db.execute(select(func.max(Caso.id)))
-    base = base_result.scalar() or 0
     rutas_guardadas: list[str] = []
     caso = None
-    for intento in range(1, 4):
-        numero = f"RM-{anio}-{base + intento:04d}"
+    for intento in range(1, 6):
+        base_result = await db.execute(select(func.max(Caso.id)))
+        base = base_result.scalar() or 0
+        numero = f"RM-{anio}-{base + 1:04d}"
         rutas_guardadas.clear()
         # El stream de cada archivo ya se leyó si hubo reintento: rebobinar.
         for archivo_subido in archivos:
@@ -101,7 +102,7 @@ async def crear_caso_action(
             rutas_guardadas.clear()
             if "numero_caso" not in str(getattr(error, "orig", error)):
                 raise
-            if intento == 3:
+            if intento == 5:
                 raise HTTPException(
                     status_code=409,
                     detail="No se pudo asignar el número de caso. Inténtalo de nuevo.",
