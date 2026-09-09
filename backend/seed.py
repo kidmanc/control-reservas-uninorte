@@ -70,7 +70,9 @@ async def seed():
         semillas_flujo = [
             ("Mónica Correa", "monica@uninorte.edu.co", "asistente_tesoreria", "MC"),
             ("Robin Pérez", "robin@uninorte.edu.co", "revisor", "RP"),
+            ("Diana Torres", "diana@uninorte.edu.co", "revisor", "DT"),
             ("JG Gómez", "jg@uninorte.edu.co", "aprobador", "JG"),
+            ("Carlos Ruiz", "carlos@uninorte.edu.co", "aprobador", "CR"),
         ]
         for nombre, correo, rol, iniciales in semillas_flujo:
             result = await db.execute(select(Usuario).where(Usuario.correo == correo))
